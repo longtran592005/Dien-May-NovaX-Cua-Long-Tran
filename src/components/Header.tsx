@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react";
 import { categories } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
+import novaXLogo from "@/assets/novax-logo.png";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,7 +39,8 @@ const Header = () => {
       <div className="gradient-primary">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <Link to="/" className="text-primary-foreground font-extrabold text-xl md:text-2xl tracking-tight flex items-center gap-2">
-            ⚡ TechMart
+            <img src={novaXLogo} alt="NovaX" className="h-8 md:h-10 w-auto" />
+            <span className="hidden sm:inline">NovaX</span>
           </Link>
 
           {/* Search bar */}
