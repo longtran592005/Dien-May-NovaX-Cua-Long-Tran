@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react";
 import { categories } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
+import novaXLogo from "@/assets/novax-logo.png";
+import { categories } from "@/data/mockData";
+import { useCart } from "@/contexts/CartContext";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
