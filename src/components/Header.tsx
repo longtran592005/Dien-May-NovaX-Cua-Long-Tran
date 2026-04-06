@@ -41,7 +41,8 @@ const Header = () => {
       <div className="gradient-primary">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <Link to="/" className="text-primary-foreground font-extrabold text-xl md:text-2xl tracking-tight flex items-center gap-2">
-            ⚡ TechMart
+            <img src={novaXLogo} alt="NovaX" className="h-8 md:h-10 w-auto" />
+            <span className="hidden sm:inline">NovaX</span>
           </Link>
 
           {/* Search bar */}
