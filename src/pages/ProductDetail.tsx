@@ -1,17 +1,69 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ShoppingCart, Zap, Star, ChevronLeft, ThumbsUp, ThumbsDown, Minus, Plus } from "lucide-react";
-import { products, reviews, formatPrice } from "@/data/mockData";
+import { products as fallbackProducts, reviews, formatPrice } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import RecommendationSection from "@/components/RecommendationSection";
+import { Product } from "@/types/product";
+import { fetchProductBySlug, fetchProducts } from "@/services/catalogApi";
 
 const ProductDetail = () => {
   const { slug } = useParams();
-  const product = products.find(p => p.slug === slug);
   const { addToCart } = useCart();
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>(fallbackProducts);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProduct = async () => {
+      if (!slug) {
+        setProduct(null);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const [detail, list] = await Promise.all([
+          fetchProductBySlug(slug),
+          fetchProducts({ page: 1, pageSize: 100 })
+        ]);
+
+        if (isMounted) {
+          setProduct(detail);
+          setAllProducts(list.items.length > 0 ? list.items : fallbackProducts);
+        }
+      } catch {
+        if (isMounted) {
+          setProduct(fallbackProducts.find((item) => item.slug === slug) || null);
+          setAllProducts(fallbackProducts);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p className="text-lg text-muted-foreground">Dang tai thong tin san pham...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -22,8 +74,8 @@ const ProductDetail = () => {
     );
   }
 
-  const similarProducts = products.filter(p => p.category === product.category && p.id !== product.id);
-  const crossSellProducts = products.filter(p => p.category !== product.category).slice(0, 6);
+  const similarProducts = allProducts.filter(p => p.category === product.category && p.id !== product.id);
+  const crossSellProducts = allProducts.filter(p => p.category !== product.category).slice(0, 6);
 
   const tabs = [
     { key: "desc" as const, label: "Mô tả" },

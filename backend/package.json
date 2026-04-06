@@ -1,0 +1,51 @@
+{
+  "name": "novax-backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "commonjs",
+  "scripts": {
+    "start:gateway": "node dist/api-gateway/src/main.js",
+    "start:auth": "node dist/auth-service/src/main.js",
+    "start:catalog": "node dist/catalog-service/src/main.js",
+    "start:cart": "node dist/cart-service/src/main.js",
+    "start:order": "node dist/order-service/src/main.js",
+    "start:payment": "node dist/payment-service/src/main.js",
+    "start:email": "node dist/email-service/src/main.js",
+    "start:ai": "node dist/ai-service/src/main.js",
+    "build": "tsc -p tsconfig.json",
+    "dev:gateway": "ts-node-dev --respawn --transpile-only apps/api-gateway/src/main.ts",
+    "dev:auth": "ts-node-dev --respawn --transpile-only apps/auth-service/src/main.ts",
+    "dev:catalog": "ts-node-dev --respawn --transpile-only apps/catalog-service/src/main.ts",
+    "dev:cart": "ts-node-dev --respawn --transpile-only apps/cart-service/src/main.ts",
+    "dev:order": "ts-node-dev --respawn --transpile-only apps/order-service/src/main.ts",
+    "dev:payment": "ts-node-dev --respawn --transpile-only apps/payment-service/src/main.ts",
+    "dev:email": "ts-node-dev --respawn --transpile-only apps/email-service/src/main.ts",
+    "dev:ai": "ts-node-dev --respawn --transpile-only apps/ai-service/src/main.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@prisma/client": "^6.6.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^8.0.0",
+    "bcryptjs": "^3.0.3",
+    "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^8.0.4",
+    "redis": "^5.11.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.16.5",
+    "prisma": "^6.6.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,38 @@
+name: Deploy VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "master"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            set -eu
+            DEPLOY_PATH="${{ secrets.VPS_DEPLOY_PATH }}"
+            PROJECT_NAME="${{ secrets.VPS_PROJECT_NAME || 'novax' }}"
+            COMPOSE_FILE="${{ secrets.VPS_COMPOSE_FILE || 'infra/docker/docker-compose.fullstack.yml' }}"
+            ENV_FILE="${{ secrets.VPS_ENV_FILE || '.env' }}"
+            EDGE_PORT="${{ secrets.VPS_EDGE_PORT || '3000' }}"
+
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git checkout "$GITHUB_SHA"
+
+            chmod +x scripts/deploy_zero_downtime.sh
+
+            DEPLOY_PATH="$DEPLOY_PATH" \
+            PROJECT_NAME="$PROJECT_NAME" \
+            COMPOSE_FILE="$COMPOSE_FILE" \
+            ENV_FILE="$ENV_FILE" \
+            EDGE_PORT="$EDGE_PORT" \
+            ./scripts/deploy_zero_downtime.sh

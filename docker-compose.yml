@@ -1,0 +1,188 @@
+name: novax
+
+services:
+  frontend:
+    container_name: novax-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+  edge-proxy:
+    image: nginx:1.27-alpine
+    container_name: novax-edge-proxy
+    depends_on:
+      - frontend
+      - api-gateway
+    volumes:
+      - ./infra/docker/nginx.edge.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${EDGE_PORT:-3000}:80"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: novax-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-novax}
+      POSTGRES_USER: ${POSTGRES_USER:-novax_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-novax_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-novax_user} -d ${POSTGRES_DB:-novax}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: novax-redis
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: novax-rabbitmq
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api-gateway
+    container_name: novax-api-gateway
+    environment:
+      PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:4010
+      CATALOG_SERVICE_URL: http://catalog-service:4020
+      CART_SERVICE_URL: http://cart-service:4030
+      ORDER_SERVICE_URL: http://order-service:4040
+      PAYMENT_SERVICE_URL: http://payment-service:4050
+      DATABASE_URL: ${INTERNAL_DATABASE_URL:-postgresql://novax_user:novax_password@postgres:5432/novax?schema=public}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth-service
+    container_name: novax-auth-service
+    environment:
+      PORT: 4010
+      DATABASE_URL: ${INTERNAL_DATABASE_URL:-postgresql://novax_user:novax_password@postgres:5432/novax?schema=public}
+      REDIS_URL: redis://redis:6379
+      EMAIL_SERVICE_URL: http://email-service:4070
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      email-service:
+        condition: service_started
+    restart: unless-stopped
+
+  catalog-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: catalog-service
+    container_name: novax-catalog-service
+    environment:
+      PORT: 4020
+      DATABASE_URL: ${INTERNAL_DATABASE_URL:-postgresql://novax_user:novax_password@postgres:5432/novax?schema=public}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  cart-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: cart-service
+    container_name: novax-cart-service
+    environment:
+      PORT: 4030
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: order-service
+    container_name: novax-order-service
+    environment:
+      PORT: 4040
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: payment-service
+    container_name: novax-payment-service
+    environment:
+      PORT: 4050
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: ai-service
+    container_name: novax-ai-service
+    environment:
+      PORT: 4060
+    restart: unless-stopped
+
+  email-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        SERVICE: email-service
+    container_name: novax-email-service
+    environment:
+      PORT: 4070
+      EMAIL_FROM: NovaX <no-reply@novax.local>
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

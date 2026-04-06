@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Package, Heart, MapPin, User, ChevronRight } from "lucide-react";
 import { formatPrice } from "@/data/mockData";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mockOrders = [
   { id: "DH001", date: "2024-03-15", total: 29990000, status: "Đã giao", items: 1, productName: "iPhone 15 Pro Max" },
@@ -9,6 +10,7 @@ const mockOrders = [
 ];
 
 const ProfilePage = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"orders" | "wishlist" | "addresses">("orders");
 
   const tabs = [
@@ -29,8 +31,8 @@ const ProfilePage = () => {
               <User className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-semibold">Khách hàng</p>
-              <p className="text-xs text-muted-foreground">user@email.com</p>
+              <p className="font-semibold">{user?.name || 'Khach hang'}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || 'user@email.com'}</p>
             </div>
           </div>
           <nav className="space-y-1">

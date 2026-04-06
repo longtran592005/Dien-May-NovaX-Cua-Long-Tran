@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { categories } from "@/data/mockData";
-import novaXLogo from "@/assets/novax-logo.png";
 
 const Footer = () => (
   <footer className="bg-foreground text-primary-foreground mt-12">
@@ -8,7 +7,6 @@ const Footer = () => (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <img src={novaXLogo} alt="NovaX" className="h-8 w-auto" />
             <h3 className="font-bold text-lg">NovaX</h3>
           </div>
           <p className="text-sm opacity-70">Siêu thị điện máy trực tuyến hàng đầu Việt Nam. Cam kết hàng chính hãng, giá tốt nhất.</p>

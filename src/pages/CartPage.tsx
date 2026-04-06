@@ -1,10 +1,19 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/data/mockData";
 
 const CartPage = () => {
-  const { items, removeFromCart, updateQuantity, clearCart, totalPrice, totalItems } = useCart();
+  const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
+  const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    if (items.length === 0) {
+      return;
+    }
+
+    navigate('/checkout');
+  };
 
   if (items.length === 0) {
     return (
@@ -72,7 +81,10 @@ const CartPage = () => {
                 <span className="text-sale">{formatPrice(totalPrice)}</span>
               </div>
             </div>
-            <button className="w-full gradient-accent text-accent-foreground py-3 rounded-xl font-semibold mt-4 hover:opacity-90 transition-opacity">
+            <button
+              onClick={handleCheckout}
+              className="w-full gradient-accent text-accent-foreground py-3 rounded-xl font-semibold mt-4 hover:opacity-90 transition-opacity"
+            >
               Tiến hành thanh toán
             </button>
             <Link to="/products" className="block text-center text-sm text-primary mt-3 hover:underline">

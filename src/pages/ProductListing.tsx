@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { SlidersHorizontal, Grid3X3, List, ChevronDown, Star, X } from "lucide-react";
-import { products, categories, formatPrice } from "@/data/mockData";
+import { SlidersHorizontal, Grid3X3, List, Star, X } from "lucide-react";
+import { products as fallbackProducts, categories, formatPrice } from "@/data/mockData";
 import ProductCard from "@/components/ProductCard";
+import { Product } from "@/types/product";
+import { fetchProducts } from "@/services/catalogApi";
 
 const brands = ["Apple", "Samsung", "Xiaomi", "Dell", "LG", "Sony", "Daikin", "Panasonic", "Cuckoo", "OPPO"];
 
@@ -17,9 +19,49 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
+      setIsLoadingProducts(true);
+      setApiError(null);
+
+      try {
+        const data = await fetchProducts({
+          q: query,
+          category: categorySlug,
+          page: 1,
+          pageSize: 100
+        });
+
+        if (isMounted) {
+          setApiProducts(data.items);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setApiError("Khong ket noi duoc API. Dang dung du lieu tam.");
+          setApiProducts(fallbackProducts);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingProducts(false);
+        }
+      }
+    };
+
+    void loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [categorySlug, query]);
 
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...apiProducts];
     if (categorySlug) result = result.filter(p => p.category === categorySlug);
     if (query) result = result.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
     result = result.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
@@ -33,7 +75,7 @@ const ProductListing = () => {
       case "bestseller": result.sort((a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0)); break;
     }
     return result;
-  }, [categorySlug, query, priceRange, selectedBrands, minRating, sortBy]);
+  }, [apiProducts, categorySlug, query, priceRange, selectedBrands, minRating, sortBy]);
 
   const currentCategory = categories.find(c => c.slug === categorySlug);
 
@@ -148,6 +190,16 @@ const ProductListing = () => {
           )}
 
           {/* Product grid */}
+          {isLoadingProducts && (
+            <div className="py-8 text-sm text-muted-foreground">Dang tai san pham...</div>
+          )}
+
+          {apiError && (
+            <div className="mb-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
+              {apiError}
+            </div>
+          )}
+
           <div className={viewMode === "grid"
             ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
             : "space-y-3"

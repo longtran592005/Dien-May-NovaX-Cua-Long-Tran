@@ -6,17 +6,54 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.pid
+*.seed
+*.pid.lock
 
 node_modules
+**/node_modules
 dist
 dist-ssr
+build
+coverage
+*.tsbuildinfo
 *.local
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/
+.turbo/
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+
+# Runtime and process
+tmp/
+temp/
+*.tmp
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
 *.suo
 *.ntvs*
 *.njsproj

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react";
 import { categories } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
-import novaXLogo from "@/assets/novax-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,6 +11,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const { totalItems } = useCart();
+  const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
   const megaMenuRef = useRef<HTMLDivElement>(null);
 
@@ -39,8 +40,7 @@ const Header = () => {
       <div className="gradient-primary">
         <div className="container mx-auto px-4 py-2 flex items-center justify-between">
           <Link to="/" className="text-primary-foreground font-extrabold text-xl md:text-2xl tracking-tight flex items-center gap-2">
-            <img src={novaXLogo} alt="NovaX" className="h-8 md:h-10 w-auto" />
-            <span className="hidden sm:inline">NovaX</span>
+            <span>NovaX</span>
           </Link>
 
           {/* Search bar */}
@@ -78,9 +78,27 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <Link to="/profile" className="text-primary-foreground hover:opacity-80 transition-opacity p-2 hidden md:block">
+            <Link to={isAuthenticated ? "/profile" : "/login"} className="text-primary-foreground hover:opacity-80 transition-opacity p-2 hidden md:block">
               <User className="w-6 h-6" />
             </Link>
+            {isAuthenticated && (
+              <button
+                onClick={() => void logout()}
+                className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/15 text-primary-foreground hover:bg-white/25"
+              >
+                Dang xuat
+              </button>
+            )}
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/15 text-primary-foreground hover:bg-white/25">
+                Admin
+              </Link>
+            )}
+            {!isAuthenticated && (
+              <Link to="/register" className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/25 text-primary-foreground hover:bg-white/35">
+                Đăng ký
+              </Link>
+            )}
             <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-primary-foreground p-2">
               {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -172,9 +190,14 @@ const Header = () => {
                 {cat.icon} {cat.name}
               </Link>
             ))}
-            <Link to="/profile" className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md" onClick={() => setMenuOpen(false)}>
-              👤 Tài khoản
+            <Link to={isAuthenticated ? "/profile" : "/login"} className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md" onClick={() => setMenuOpen(false)}>
+              👤 {isAuthenticated ? 'Tai khoan' : 'Dang nhap'}
             </Link>
+            {user?.role === 'admin' && (
+              <Link to="/admin" className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md" onClick={() => setMenuOpen(false)}>
+                ⚙️ Admin
+              </Link>
+            )}
           </div>
         </div>
       )}
