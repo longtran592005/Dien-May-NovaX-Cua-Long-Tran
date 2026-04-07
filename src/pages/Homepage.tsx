@@ -44,7 +44,9 @@ const Homepage = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    void fetchProducts({ page: 1, pageSize: 200 }).then(res => setProducts(res.items)).catch(() => {});
+    void fetchProducts({ page: 1, pageSize: 200 })
+      .then(res => setProducts(res.items))
+      .catch(console.error);
   }, []);
 
   const flashSaleProducts = products.filter(p => p.discount && p.discount >= 20);

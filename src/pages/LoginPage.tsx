@@ -81,15 +81,9 @@ export default function LoginPage() {
 
         <button
           type="button"
-          onClick={async () => {
-            try {
-              // Forced mock login for Google button Demo
-              await login("admin@novax.vn", "123456");
-              toast.success('Đăng nhập bằng Google thành công (Demo)');
-              navigate(redirectTo, { replace: true });
-            } catch (e) {
-              toast.error('Lỗi khi đăng nhập Google');
-            }
+          onClick={() => {
+            toast.success('Đăng nhập bằng Google thành công (Demo)');
+            navigate(redirectTo, { replace: true });
           }}
           className="mt-4 w-full flex justify-center items-center gap-2 border border-border bg-background rounded-lg py-2.5 font-medium hover:bg-secondary transition-colors"
         >

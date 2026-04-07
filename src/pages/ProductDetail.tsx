@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ShoppingCart, Zap, Star, ThumbsUp, ThumbsDown, Minus, Plus, Heart, GitCompare, Camera, ShieldCheck, Truck, RotateCcw } from "lucide-react";
+import { ShoppingCart, Zap, Star, ThumbsUp, ThumbsDown, Minus, Plus, Heart, GitCompare, Camera, ShieldCheck, Truck, ArrowRight, RotateCcw } from "lucide-react";
 import { products as fallbackProducts, reviews as mockReviews, formatPrice } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -50,10 +50,11 @@ const ProductDetail = () => {
           setProduct(detail);
           setAllProducts(list.items.length > 0 ? list.items : fallbackProducts);
         }
-      } catch {
+      } catch (err) {
         if (isMounted) {
-          setProduct(fallbackProducts.find((item) => item.slug === slug) || null);
-          setAllProducts(fallbackProducts);
+          console.error("Failed to load product detail:", err);
+          setProduct(null);
+          setAllProducts([]);
         }
       } finally {
         if (isMounted) {

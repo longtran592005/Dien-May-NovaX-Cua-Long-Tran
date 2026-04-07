@@ -11,6 +11,14 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      "/api": {
+        target: process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL.startsWith('http') 
+          ? process.env.VITE_API_BASE_URL.replace(/\/api\/.*$/, '') 
+          : "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

@@ -25,144 +25,199 @@ interface RegisterResponse {
 function buildUrl(path: string) {
   const base = API_BASE_URL.replace(/\/+$/, '');
   const normalizedPath = path.replace(/^\/+/, '');
+  // Nếu base là URL tương đối (ex: /api/v1), phải gắn window.location.origin
+  if (base.startsWith('/')) {
+    return `${window.location.origin}${base}/${normalizedPath}`;
+  }
   return `${base}/${normalizedPath}`;
 }
 
+let memoryAccessToken: string | null = null;
+
 export function getStoredAccessToken() {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return memoryAccessToken || sessionStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 export function getStoredRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return sessionStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function setStoredTokens(accessToken: string, refreshToken: string) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  memoryAccessToken = accessToken;
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function clearStoredTokens() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  memoryAccessToken = null;
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-const getMockAdmin = (): AuthUser => ({
-  id: "u0-admin",
-  email: "admin@novax.vn",
-  name: "Quản Trị Viên",
-  role: "admin"
-});
-
 export async function login(email: string, password: string): Promise<LoginResponse> {
-  try {
-    const response = await fetch(buildUrl('auth/login'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (!response.ok) {
-      const body = (await response.json()) as { message?: string };
-      throw new Error(body.message || 'Login failed');
-    }
-    return await response.json();
-  } catch {
-    // FALLBACK Mock Login
-    return {
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-      user: getMockAdmin()
-    };
+  const response = await fetch(buildUrl('auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Login failed');
   }
+
+  return response.json() as Promise<LoginResponse>;
 }
 
 export async function register(email: string, password: string, fullName: string): Promise<RegisterResponse> {
-  try {
-    const response = await fetch(buildUrl('auth/register'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, fullName })
-    });
-    if (!response.ok) throw new Error('Register failed');
-    return await response.json();
-  } catch {
-    return { message: "Mock register success", email, requiresOtpVerification: false };
+  const response = await fetch(buildUrl('auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, fullName })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Register failed');
   }
+
+  return response.json() as Promise<RegisterResponse>;
 }
 
 export async function verifyOtp(email: string, otpCode: string) {
-  return { message: "Mock verified", verified: true };
+  const response = await fetch(buildUrl('auth/verify-otp'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otpCode })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'OTP verification failed');
+  }
+
+  return response.json() as Promise<{ message: string; verified: boolean }>;
 }
 
 export async function requestOtp(email: string) {
-  return { message: "Mock sent" };
+  const response = await fetch(buildUrl('auth/request-otp'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Request OTP failed');
+  }
+
+  return response.json() as Promise<{ message: string }>;
 }
 
 export async function requestPasswordReset(email: string) {
-  return { message: "Mock reset sent" };
+  const response = await fetch(buildUrl('auth/request-password-reset'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Request password reset failed');
+  }
+
+  return response.json() as Promise<{ message: string }>;
 }
 
 export async function resetPassword(email: string, otpCode: string, newPassword: string) {
-  return { message: "Mock reset success" };
+  const response = await fetch(buildUrl('auth/reset-password'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otpCode, newPassword })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Reset password failed');
+  }
+
+  return response.json() as Promise<{ message: string }>;
 }
 
 export async function refresh(): Promise<LoginResponse> {
-  try {
-    const refreshToken = getStoredRefreshToken();
-    if (!refreshToken) throw new Error('Missing refresh token');
-    const response = await fetch(buildUrl('auth/refresh'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken })
-    });
-    if (!response.ok) throw new Error('Refresh failed');
-    return await response.json();
-  } catch {
-    return {
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-      user: getMockAdmin()
-    };
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) {
+    throw new Error('Missing refresh token');
   }
+
+  const response = await fetch(buildUrl('auth/refresh'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+
+  if (!response.ok) {
+    throw new Error('Refresh failed');
+  }
+
+  return response.json() as Promise<LoginResponse>;
 }
 
 export async function me(accessToken?: string): Promise<AuthUser> {
-  try {
-    const token = accessToken || getStoredAccessToken();
-    if (!token) throw new Error('Missing auth token');
-    const response = await fetch(buildUrl('auth/me'), {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Unauthorized');
-    return await response.json();
-  } catch {
-    // AUTO MOCK ADMIN IF BACKEND IS DOWN
-    return getMockAdmin();
+  const token = accessToken || getStoredAccessToken();
+  if (!token) {
+    throw new Error('Missing access token');
   }
+
+  const response = await fetch(buildUrl('auth/me'), {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Unauthorized');
+  }
+
+  return response.json() as Promise<AuthUser>;
 }
 
 export async function logout(accessToken?: string) {
-  try {
-    const token = accessToken || getStoredAccessToken();
-    if (token) {
-      await fetch(buildUrl('auth/logout'), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-    }
-  } catch {
-    // Ignore
-  } finally {
+  const token = accessToken || getStoredAccessToken();
+  if (!token) {
     clearStoredTokens();
+    return;
   }
+
+  await fetch(buildUrl('auth/logout'), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  clearStoredTokens();
 }
 
 export async function getAuthHeader() {
   let token = getStoredAccessToken();
-  if (!token) return {};
+
+  if (!token) {
+    return {};
+  }
+
   try {
     await me(token);
     return { Authorization: `Bearer ${token}` };
   } catch {
-    return { Authorization: `Bearer mock-token` };
+    try {
+      const refreshed = await refresh();
+      setStoredTokens(refreshed.accessToken, refreshed.refreshToken);
+      token = refreshed.accessToken;
+      return { Authorization: `Bearer ${token}` };
+    } catch {
+      clearStoredTokens();
+      return {};
+    }
   }
 }
