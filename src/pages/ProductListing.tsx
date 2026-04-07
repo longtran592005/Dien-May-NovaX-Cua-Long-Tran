@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { SlidersHorizontal, Grid3X3, List, Star, X } from "lucide-react";
+import { SlidersHorizontal, Grid3X3, List, Star, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { products as fallbackProducts, categories, formatPrice } from "@/data/mockData";
 import ProductCard from "@/components/ProductCard";
+import { ProductGridSkeleton } from "@/components/Skeleton";
 import { Product } from "@/types/product";
 import { fetchProducts } from "@/services/catalogApi";
 
 const brands = ["Apple", "Samsung", "Xiaomi", "Dell", "LG", "Sony", "Daikin", "Panasonic", "Cuckoo", "OPPO"];
+const PRODUCTS_PER_PAGE = 12;
 
 const ProductListing = () => {
   const [searchParams] = useSearchParams();
@@ -20,8 +22,9 @@ const ProductListing = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,9 +44,9 @@ const ProductListing = () => {
         if (isMounted) {
           setApiProducts(data.items);
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
-          setApiError("Khong ket noi duoc API. Dang dung du lieu tam.");
+          setApiError("Không kết nối được API. Đang dùng dữ liệu mẫu.");
           setApiProducts(fallbackProducts);
         }
       } finally {
@@ -54,6 +57,7 @@ const ProductListing = () => {
     };
 
     void loadProducts();
+    setCurrentPage(1);
 
     return () => {
       isMounted = false;
@@ -79,8 +83,13 @@ const ProductListing = () => {
 
   const currentCategory = categories.find(c => c.slug === categorySlug);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE);
+
   const toggleBrand = (brand: string) => {
     setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
+    setCurrentPage(1);
   };
 
   const FilterSidebar = () => (
@@ -89,7 +98,7 @@ const ProductListing = () => {
       <div>
         <h4 className="font-semibold text-sm mb-3">Khoảng giá</h4>
         <input type="range" min={0} max={50000000} step={1000000} value={priceRange[1]}
-          onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
+          onChange={e => { setPriceRange([priceRange[0], Number(e.target.value)]); setCurrentPage(1); }}
           className="w-full accent-primary"
         />
         <div className="flex justify-between text-xs text-muted-foreground mt-1">
@@ -117,7 +126,7 @@ const ProductListing = () => {
         <h4 className="font-semibold text-sm mb-3">Đánh giá</h4>
         <div className="space-y-1">
           {[4, 3, 2, 1].map(rating => (
-            <button key={rating} onClick={() => setMinRating(minRating === rating ? 0 : rating)}
+            <button key={rating} onClick={() => { setMinRating(minRating === rating ? 0 : rating); setCurrentPage(1); }}
               className={`flex items-center gap-1 px-2 py-1 rounded text-sm w-full ${minRating === rating ? 'bg-primary/10 text-primary' : 'hover:bg-secondary'}`}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star key={i} className={`w-3.5 h-3.5 ${i < rating ? 'fill-warning text-warning' : 'text-border'}`} />
@@ -161,7 +170,7 @@ const ProductListing = () => {
               <span className="text-sm text-muted-foreground">{filteredProducts.length} sản phẩm</span>
             </div>
             <div className="flex items-center gap-2">
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              <select value={sortBy} onChange={e => { setSortBy(e.target.value); setCurrentPage(1); }}
                 className="px-3 py-1.5 border border-border rounded-lg text-sm bg-card focus:ring-2 focus:ring-primary outline-none">
                 <option value="default">Mặc định</option>
                 <option value="price-asc">Giá tăng dần</option>
@@ -189,10 +198,8 @@ const ProductListing = () => {
             </div>
           )}
 
-          {/* Product grid */}
-          {isLoadingProducts && (
-            <div className="py-8 text-sm text-muted-foreground">Dang tai san pham...</div>
-          )}
+          {/* Loading skeleton */}
+          {isLoadingProducts && <ProductGridSkeleton count={8} />}
 
           {apiError && (
             <div className="mb-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
@@ -200,19 +207,51 @@ const ProductListing = () => {
             </div>
           )}
 
-          <div className={viewMode === "grid"
-            ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
-            : "space-y-3"
-          }>
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {/* Product grid */}
+          {!isLoadingProducts && (
+            <div className={viewMode === "grid"
+              ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
+              : "space-y-3"
+            }>
+              {paginatedProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
 
-          {filteredProducts.length === 0 && (
+          {filteredProducts.length === 0 && !isLoadingProducts && (
             <div className="text-center py-16">
               <p className="text-muted-foreground text-lg">Không tìm thấy sản phẩm phù hợp.</p>
               <Link to="/products" className="text-primary font-medium mt-2 inline-block hover:underline">Xem tất cả sản phẩm</Link>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${currentPage === i + 1 ? 'gradient-primary text-primary-foreground' : 'border border-border hover:bg-secondary'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>

@@ -271,11 +271,19 @@ export class GatewayController {
       body: JSON.stringify(payload)
     });
 
+    const body = (await response.json()) as { message?: string } | unknown;
+
     if (!response.ok) {
-      throw new UnauthorizedException('Invalid credentials');
+      const message = typeof body === 'object' && body && 'message' in body ? body.message : undefined;
+
+      if (response.status === 400) {
+        throw new BadRequestException(message || 'Invalid credentials');
+      }
+
+      throw new UnauthorizedException(message || 'Invalid credentials');
     }
 
-    return response.json();
+    return body;
   }
 
   @Post('auth/refresh')

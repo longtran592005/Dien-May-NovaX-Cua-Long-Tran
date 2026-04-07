@@ -1,4 +1,5 @@
 import { Product } from '@/types/product';
+import { products as fallbackProducts } from '@/data/mockData';
 
 export interface ProductListResponse {
   items: Product[];
@@ -8,6 +9,13 @@ export interface ProductListResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+const getLocalProducts = (): Product[] => {
+  const local = localStorage.getItem('novax_products');
+  if (local) return JSON.parse(local);
+  localStorage.setItem('novax_products', JSON.stringify(fallbackProducts));
+  return fallbackProducts;
+}
 
 export async function fetchProducts(params: {
   q?: string | null;
@@ -20,25 +28,33 @@ export async function fetchProducts(params: {
   const url = new URL('products', `${API_BASE_URL.replace(/\/$/, '')}/`);
   if (params.q) url.searchParams.set('q', params.q);
   if (params.category) url.searchParams.set('category', params.category);
-  if (typeof params.minPrice === 'number') url.searchParams.set('minPrice', String(params.minPrice));
-  if (typeof params.maxPrice === 'number') url.searchParams.set('maxPrice', String(params.maxPrice));
-  if (typeof params.page === 'number') url.searchParams.set('page', String(params.page));
-  if (typeof params.pageSize === 'number') url.searchParams.set('pageSize', String(params.pageSize));
 
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error('Failed to fetch products');
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error();
+    return await response.json();
+  } catch {
+    // FALLBACK CHẠY LOCALSTORAGE
+    let items = getLocalProducts();
+    if (params.category) items = items.filter(p => p.category === params.category);
+    if (params.q) {
+      const query = params.q.toLowerCase();
+      items = items.filter(p => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query));
+    }
+    return { items, page: 1, pageSize: items.length, total: items.length };
   }
-
-  return response.json() as Promise<ProductListResponse>;
 }
 
 export async function fetchProductBySlug(slug: string): Promise<Product> {
   const url = new URL(`products/${slug}`, `${API_BASE_URL.replace(/\/$/, '')}/`);
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error('Failed to fetch product detail');
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error();
+    return await response.json();
+  } catch {
+    const items = getLocalProducts();
+    const product = items.find(p => p.slug === slug);
+    if (!product) throw new Error("Not found");
+    return product;
   }
-
-  return response.json() as Promise<Product>;
 }

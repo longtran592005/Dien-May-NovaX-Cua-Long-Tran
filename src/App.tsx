@@ -5,9 +5,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
+import { ComparisonProvider } from "@/contexts/ComparisonContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
+import AnnouncementBar from "@/components/AnnouncementBar";
+import ComparisonBar from "@/components/ComparisonBar";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import AdminLayout from "@/components/AdminLayout";
@@ -26,6 +31,11 @@ import AdminProductsPage from "@/pages/admin/ProductsPage";
 import AdminOrdersPage from "@/pages/admin/OrdersPage";
 import AdminOrderDetailPage from "@/pages/admin/OrderDetailPage";
 import AdminUsersPage from "@/pages/admin/UsersPage";
+import OrderTrackingPage from "@/pages/OrderTrackingPage";
+import ComparisonPage from "@/pages/ComparisonPage";
+import BlogPage from "@/pages/BlogPage";
+import StoreLocatorPage from "@/pages/StoreLocatorPage";
+import PolicyPage from "@/pages/PolicyPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,58 +45,71 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Homepage />} />
-                  <Route path="/products" element={<ProductListing />} />
-                  <Route path="/product/:slug" element={<ProductDetail />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/verify-email" element={<VerifyEmailPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route
-                    path="/admin"
-                    element={
-                      <AdminRoute>
-                        <AdminLayout />
-                      </AdminRoute>
-                    }
-                  >
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="products" element={<AdminProductsPage />} />
-                    <Route path="orders" element={<AdminOrdersPage />} />
-                    <Route path="orders/:id" element={<AdminOrderDetailPage />} />
-                    <Route path="users" element={<AdminUsersPage />} />
-                  </Route>
-                  <Route
-                    path="/checkout"
-                    element={
-                      <ProtectedRoute>
-                        <CheckoutPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <ProfilePage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-              <ChatWidget />
-            </div>
-          </BrowserRouter>
+          <WishlistProvider>
+            <ComparisonProvider>
+              <NotificationProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <div className="min-h-screen flex flex-col">
+                    <AnnouncementBar />
+                    <Header />
+                    <main className="flex-1">
+                      <Routes>
+                        <Route path="/" element={<Homepage />} />
+                        <Route path="/products" element={<ProductListing />} />
+                        <Route path="/product/:slug" element={<ProductDetail />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/verify-email" element={<VerifyEmailPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/order-tracking" element={<OrderTrackingPage />} />
+                        <Route path="/comparison" element={<ComparisonPage />} />
+                        <Route path="/blog" element={<BlogPage />} />
+                        <Route path="/stores" element={<StoreLocatorPage />} />
+                        <Route path="/policy" element={<PolicyPage />} />
+                        <Route
+                          path="/admin"
+                          element={
+                            <AdminRoute>
+                              <AdminLayout />
+                            </AdminRoute>
+                          }
+                        >
+                          <Route index element={<AdminDashboard />} />
+                          <Route path="products" element={<AdminProductsPage />} />
+                          <Route path="orders" element={<AdminOrdersPage />} />
+                          <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+                          <Route path="users" element={<AdminUsersPage />} />
+                        </Route>
+                        <Route
+                          path="/checkout"
+                          element={
+                            <ProtectedRoute>
+                              <CheckoutPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/profile"
+                          element={
+                            <ProtectedRoute>
+                              <ProfilePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </main>
+                    <Footer />
+                    <ComparisonBar />
+                    <ChatWidget />
+                  </div>
+                </BrowserRouter>
+              </NotificationProvider>
+            </ComparisonProvider>
+          </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </TooltipProvider>

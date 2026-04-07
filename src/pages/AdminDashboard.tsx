@@ -93,7 +93,7 @@ export default function AdminDashboard() {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Khung thời gian</span>
-          {(Object.keys(rangeLabels) as Array<keyof typeof rangeLabels>).map((key) => (
+          {(Object.keys(rangeLabels) as unknown as Array<keyof typeof rangeLabels>).map((key) => (
             <button
               key={key}
               onClick={() => setRangeDays(key)}
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
-        {analytics ? (
+        {analytics && analytics.rangeStart ? (
           <p className="mt-2 text-xs text-muted-foreground">
             Dữ liệu từ {new Date(analytics.rangeStart).toLocaleDateString('vi-VN')} đến {new Date(analytics.rangeEnd).toLocaleDateString('vi-VN')}
           </p>

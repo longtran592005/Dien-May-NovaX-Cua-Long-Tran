@@ -35,18 +35,18 @@ export class AuthService {
 
   /**
    * Register new user
-   * - Validate email doesn't exist
+   * - Create new user or refresh OTP for an unverified existing user
    * - Hash password with bcrypt
    * - Generate 6-digit OTP
    * - Send OTP email (or store in Redis for dev)
-   * - Create unverified user
+   * - Keep verified users blocked
    */
   async register(email: string, password: string, fullName: string) {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user exists
     const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) {
+    if (existing?.verified) {
       throw new BadRequestException('Email already registered');
     }
 
@@ -62,20 +62,33 @@ export class AuthService {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minute expiry
 
-    // Create unverified user
-    await this.prisma.user.create({
-      data: {
-        email: normalizedEmail,
-        fullName,
-        passwordHash,
-        verified: false,
-        otpCode,
-        otpExpiry,
-        carts: {
-          create: {} // Create empty cart
+    if (existing) {
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          fullName,
+          passwordHash,
+          verified: false,
+          otpCode,
+          otpExpiry
         }
-      }
-    });
+      });
+    } else {
+      // Create unverified user
+      await this.prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          fullName,
+          passwordHash,
+          verified: false,
+          otpCode,
+          otpExpiry,
+          carts: {
+            create: {} // Create empty cart
+          }
+        }
+      });
+    }
 
     // Store OTP in Redis for quick lookup and audit
     await this.redis.setex(`otp:${normalizedEmail}`, 300, otpCode); // 5 min TTL
@@ -94,7 +107,9 @@ export class AuthService {
     console.log(`[OTP] ${normalizedEmail}: ${otpCode}`);
 
     return {
-      message: 'Registration successful. Check email for OTP code.',
+      message: existing
+        ? 'Registration already exists. A new OTP has been sent for verification.'
+        : 'Registration successful. Check email for OTP code.',
       email: normalizedEmail,
       requiresOtpVerification: true
     };

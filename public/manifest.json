@@ -1,0 +1,18 @@
+{
+  "name": "NovaX - Siêu thị điện máy",
+  "short_name": "NovaX",
+  "description": "Siêu thị điện máy trực tuyến hàng đầu Việt Nam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f7",
+  "theme_color": "#1570cd",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["shopping", "electronics"]
+}

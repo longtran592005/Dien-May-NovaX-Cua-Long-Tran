@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, Menu, X, ChevronDown } from "lucide-react";
-import { categories } from "@/data/mockData";
+import { Search, ShoppingCart, User, Menu, X, ChevronDown, Heart, GitCompare, Zap } from "lucide-react";
+import { categories, products } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,6 +13,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const { totalItems } = useCart();
+  const { totalItems: wishlistCount } = useWishlist();
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
   const megaMenuRef = useRef<HTMLDivElement>(null);
@@ -34,125 +37,180 @@ const Header = () => {
     }
   };
 
+  const suggestions = searchQuery.length > 1
+    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 5)
+    : [];
+
   return (
-    <header className="sticky top-0 z-50 bg-card shadow-card">
+    <header className="sticky top-0 z-50 glass border-b border-border/40 shadow-soft">
       {/* Top bar */}
-      <div className="gradient-primary">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="text-primary-foreground font-extrabold text-xl md:text-2xl tracking-tight flex items-center gap-2">
-            <span>NovaX</span>
-          </Link>
-
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl mx-8">
-            <div className="relative w-full">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                placeholder="Bạn tìm gì hôm nay?"
-                className="w-full pl-4 pr-12 py-2.5 rounded-lg text-foreground bg-card border-0 focus:ring-2 focus:ring-accent outline-none text-sm"
-              />
-              <button type="submit" className="absolute right-0 top-0 h-full px-4 gradient-accent rounded-r-lg text-accent-foreground hover:opacity-90 transition-opacity">
-                <Search className="w-5 h-5" />
-              </button>
-              {/* AI-ready autocomplete placeholder */}
-              {searchFocused && searchQuery && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-card rounded-lg shadow-float border border-border p-3 z-50">
-                  <p className="text-xs text-muted-foreground">🔍 Gợi ý: {searchQuery}...</p>
-                  <p className="text-xs text-muted-foreground mt-1">💡 AI sẽ gợi ý sản phẩm tại đây</p>
-                </div>
-              )}
-            </div>
-          </form>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3">
-            <Link to="/cart" className="relative text-primary-foreground hover:opacity-80 transition-opacity p-2">
-              <ShoppingCart className="w-6 h-6" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-            <Link to={isAuthenticated ? "/profile" : "/login"} className="text-primary-foreground hover:opacity-80 transition-opacity p-2 hidden md:block">
-              <User className="w-6 h-6" />
-            </Link>
-            {isAuthenticated && (
-              <button
-                onClick={() => void logout()}
-                className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/15 text-primary-foreground hover:bg-white/25"
-              >
-                Dang xuat
-              </button>
-            )}
-            {user?.role === 'admin' && (
-              <Link to="/admin" className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/15 text-primary-foreground hover:bg-white/25">
-                Admin
-              </Link>
-            )}
-            {!isAuthenticated && (
-              <Link to="/register" className="hidden md:inline-flex text-xs px-3 py-1.5 rounded bg-white/25 text-primary-foreground hover:bg-white/35">
-                Đăng ký
-              </Link>
-            )}
-            <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-primary-foreground p-2">
-              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <Link to="/" className="text-primary font-black text-2xl md:text-3xl tracking-tighter flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white group-hover:rotate-12 transition-transform">
+            <Zap className="w-5 h-5 fill-current" />
           </div>
+          <span className="text-gradient from-primary to-accent">NovaX</span>
+        </Link>
+
+        {/* Premium Search bar */}
+        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl mx-8">
+          <div className="relative w-full group">
+            <div className={`absolute inset-0 bg-primary/20 blur-xl rounded-full transition-opacity duration-300 -z-10 ${searchFocused ? 'opacity-100' : 'opacity-0'}`}></div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              placeholder="Bạn tìm gì hôm nay?"
+              className="w-full pl-6 pr-14 py-3.5 rounded-full text-foreground bg-secondary/40 backdrop-blur-sm border border-border/50 focus:border-primary/50 focus:bg-background outline-none text-sm font-medium transition-all shadow-inner"
+            />
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full gradient-primary text-white flex items-center justify-center hover:scale-105 transition-transform shadow-md">
+              <Search className="w-5 h-5" />
+            </button>
+            
+            {/* Live autocomplete dropdown (Glass) */}
+            {searchFocused && searchQuery.length > 0 && (
+              <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass rounded-2xl border border-border/50 overflow-hidden animate-fade-up">
+                {suggestions.length > 0 ? (
+                  <div className="py-2">
+                    {suggestions.map(p => (
+                      <Link
+                        key={p.id}
+                        to={`/product/${p.slug}`}
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-secondary/50 transition-colors"
+                        onClick={() => { setSearchQuery(""); setSearchFocused(false); }}
+                      >
+                        <img src={p.images[0]} alt="" className="w-12 h-12 rounded-xl object-cover bg-white" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate text-foreground">{p.name}</p>
+                          <p className="text-sm text-sale font-extrabold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price)}</p>
+                        </div>
+                      </Link>
+                    ))}
+                    <Link to={`/products?q=${encodeURIComponent(searchQuery)}`} className="block text-center py-3 text-sm text-primary font-bold hover:bg-secondary/50 border-t border-border/50">
+                      Xem tất cả kết quả →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <p className="text-sm text-muted-foreground font-medium">🔍 Đang tìm kiếm "{searchQuery}"...</p>
+                    <p className="text-xs text-muted-foreground/70 mt-2">💡 Gợi ý sẽ hiển thị nếu tìm thấy sản phẩm</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </form>
+
+        {/* Quick Actions */}
+        <div className="flex items-center gap-1 md:gap-2">
+          <NotificationDropdown />
+          <Link to="/profile?tab=wishlist" className="relative text-foreground hover:text-sale hover:bg-secondary p-2.5 rounded-full transition-all hidden md:flex items-center justify-center">
+            <Heart className="w-5 h-5" />
+            {wishlistCount > 0 && (
+              <span className="absolute 0 top-0 right-0 bg-sale text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center border-2 border-background">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+          <Link to="/cart" className="relative text-foreground hover:text-primary hover:bg-secondary p-2.5 rounded-full transition-all flex items-center justify-center">
+            <ShoppingCart className="w-5 h-5" />
+            {totalItems > 0 && (
+              <span className="absolute 0 top-0 right-0 bg-primary text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center border-2 border-background shadow-md">
+                {totalItems}
+              </span>
+            )}
+          </Link>
+          
+          <div className="hidden md:flex items-center gap-2 ml-2 pl-2 border-l border-border/50">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link to="/profile" className="flex items-center gap-2 hover:bg-secondary px-3 py-1.5 rounded-full transition-colors">
+                  <div className="w-7 h-7 rounded-full gradient-hero text-white flex items-center justify-center text-xs font-bold">
+                    {user?.name?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-sm font-semibold truncate max-w-[100px]">{user?.name}</span>
+                </Link>
+                {user?.role === 'admin' && (
+                  <Link to="/admin" className="text-xs font-bold px-3 py-2 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+                    Admin
+                  </Link>
+                )}
+                <button onClick={() => void logout()} className="text-xs font-bold px-3 py-2 rounded-full border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors">
+                  Thoát
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="flex items-center gap-2 gradient-primary text-white px-5 py-2 rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:opacity-90 transition-all">
+                <User className="w-4 h-4" /> Đăng nhập
+              </Link>
+            )}
+          </div>
+          
+          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-foreground p-2 rounded-full hover:bg-secondary transition-colors">
+            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
 
-      {/* Category nav */}
-      <nav className="hidden md:block bg-card border-b border-border" ref={megaMenuRef}>
+      {/* Category nav - Glass styling */}
+      <nav className="hidden md:block border-t border-border/40" ref={megaMenuRef}>
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setMegaMenuOpen(!megaMenuOpen)}
-              className="flex items-center gap-1 px-4 py-3 font-semibold text-sm hover:text-primary transition-colors"
+              className={`flex items-center gap-2 px-5 py-3 font-bold text-sm transition-colors rounded-t-xl ${megaMenuOpen ? 'bg-primary/10 text-primary' : 'hover:text-primary hover:bg-secondary/50'}`}
             >
               <Menu className="w-4 h-4" />
               Danh mục
-              <ChevronDown className={`w-3 h-3 transition-transform ${megaMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${megaMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-            {categories.slice(0, 7).map(cat => (
+            {categories.slice(0, 6).map(cat => (
               <Link
                 key={cat.id}
                 to={`/products?category=${cat.slug}`}
-                className="px-3 py-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
+                className="px-4 py-3 text-sm font-semibold text-muted-foreground hover:text-primary hover:bg-secondary/30 transition-colors whitespace-nowrap rounded-lg"
               >
-                {cat.icon} {cat.name}
+                {cat.name}
               </Link>
             ))}
+            <div className="flex-1"></div>
+            <Link to="/blog" className="px-4 py-3 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors whitespace-nowrap">
+              Tin tức
+            </Link>
+            <Link to="/order-tracking" className="px-4 py-3 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors whitespace-nowrap">
+              Tra cứu đơn
+            </Link>
           </div>
 
-          {/* Mega menu */}
+          {/* Mega menu - Glass dropdown */}
           {megaMenuOpen && (
-            <div className="absolute left-0 right-0 bg-card border-b border-border shadow-float animate-fade-in">
-              <div className="container mx-auto px-4 py-6">
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-6">
+            <div className="absolute left-0 right-0 glass border-b border-border shadow-float animate-fade-in origin-top">
+              <div className="container mx-auto px-4 py-8">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-8">
                   {categories.map(cat => (
-                    <div key={cat.id}>
+                    <div key={cat.id} className="group/cat">
                       <Link
                         to={`/products?category=${cat.slug}`}
-                        className="font-semibold text-sm text-foreground hover:text-primary flex items-center gap-2 mb-2"
+                        className="font-extrabold text-sm text-foreground hover:text-primary flex items-center gap-2 mb-4"
                         onClick={() => setMegaMenuOpen(false)}
                       >
-                        <span className="text-lg">{cat.icon}</span> {cat.name}
+                        <span className="text-2xl bg-secondary w-10 h-10 rounded-xl flex items-center justify-center group-hover/cat:scale-110 transition-transform">{cat.icon}</span> 
+                        {cat.name}
                       </Link>
-                      {cat.subcategories?.map(sub => (
-                        <Link
-                          key={sub.id}
-                          to={`/products?category=${cat.slug}&sub=${sub.slug}`}
-                          className="block text-sm text-muted-foreground hover:text-primary py-0.5 pl-7"
-                          onClick={() => setMegaMenuOpen(false)}
-                        >
-                          {sub.name}
-                        </Link>
-                      ))}
+                      <div className="flex flex-col gap-2">
+                        {cat.subcategories?.map(sub => (
+                          <Link
+                            key={sub.id}
+                            to={`/products?category=${cat.slug}&sub=${sub.slug}`}
+                            className="text-sm font-medium text-muted-foreground hover:text-primary hover:translate-x-1 transition-all pl-12"
+                            onClick={() => setMegaMenuOpen(false)}
+                          >
+                            {sub.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -162,42 +220,61 @@ const Header = () => {
         </div>
       </nav>
 
-      {/* Mobile menu */}
+      {/* Mobile menu (Glass) */}
       {menuOpen && (
-        <div className="md:hidden bg-card border-b border-border animate-fade-in">
-          <form onSubmit={handleSearch} className="px-4 py-3">
+        <div className="md:hidden glass border-b border-border/50 animate-fade-in absolute w-full top-full">
+          <form onSubmit={handleSearch} className="px-4 py-4">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm..."
-                className="w-full pl-4 pr-10 py-2 rounded-lg border border-border bg-secondary text-sm focus:ring-2 focus:ring-primary outline-none"
+                placeholder="Tìm sản phẩm..."
+                className="w-full pl-4 pr-12 py-3 rounded-xl border border-border/50 bg-secondary/50 text-sm font-medium focus:ring-2 focus:ring-primary outline-none"
               />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center gradient-primary text-white rounded-lg">
                 <Search className="w-4 h-4" />
               </button>
             </div>
           </form>
-          <div className="px-4 pb-4 space-y-1">
+          <div className="px-4 pb-6 space-y-2 max-h-[70vh] overflow-y-auto">
+            <div className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-2 px-2">Danh mục</div>
             {categories.map(cat => (
               <Link
                 key={cat.id}
                 to={`/products?category=${cat.slug}`}
-                className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md"
+                className="flex items-center gap-3 py-3 px-4 text-sm font-bold text-foreground bg-secondary/30 rounded-xl"
                 onClick={() => setMenuOpen(false)}
               >
-                {cat.icon} {cat.name}
+                <span className="text-lg">{cat.icon}</span> {cat.name}
               </Link>
             ))}
-            <Link to={isAuthenticated ? "/profile" : "/login"} className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md" onClick={() => setMenuOpen(false)}>
-              👤 {isAuthenticated ? 'Tai khoan' : 'Dang nhap'}
+            <div className="h-px bg-border my-4"></div>
+            <Link to="/blog" className="block py-2.5 px-4 text-sm font-bold text-foreground hover:bg-secondary/50 rounded-xl" onClick={() => setMenuOpen(false)}>
+              Tin tức
             </Link>
-            {user?.role === 'admin' && (
-              <Link to="/admin" className="block py-2 px-3 text-sm text-foreground hover:bg-secondary rounded-md" onClick={() => setMenuOpen(false)}>
-                ⚙️ Admin
-              </Link>
-            )}
+            <Link to="/order-tracking" className="block py-2.5 px-4 text-sm font-bold text-foreground hover:bg-secondary/50 rounded-xl" onClick={() => setMenuOpen(false)}>
+              Tra cứu đơn hàng
+            </Link>
+            <Link to="/stores" className="block py-2.5 px-4 text-sm font-bold text-foreground hover:bg-secondary/50 rounded-xl" onClick={() => setMenuOpen(false)}>
+              Hệ thống cửa hàng
+            </Link>
+            <div className="mt-4 pt-4 border-t border-border">
+              {isAuthenticated ? (
+                <div className="flex flex-col gap-2">
+                  <Link to="/profile" className="flex items-center justify-center gap-2 gradient-primary text-white py-3 rounded-xl font-bold" onClick={() => setMenuOpen(false)}>
+                    Tài khoản của tôi
+                  </Link>
+                  <button onClick={() => { logout(); setMenuOpen(false); }} className="py-3 text-sm font-bold text-destructive">
+                    Đăng xuất
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className="flex items-center justify-center gap-2 gradient-primary text-white py-3 rounded-xl font-bold" onClick={() => setMenuOpen(false)}>
+                  <User className="w-5 h-5" /> Đăng nhập / Đăng ký
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}
