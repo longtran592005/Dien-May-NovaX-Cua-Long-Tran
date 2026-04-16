@@ -3,6 +3,7 @@ import { X, Star } from "lucide-react";
 import { useComparison } from "@/contexts/ComparisonContext";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/data/mockData";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const ComparisonPage = () => {
   const { items, removeFromComparison, clearComparison } = useComparison();
@@ -50,7 +51,12 @@ const ComparisonPage = () => {
                       <X className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
                     <Link to={`/product/${product.slug}`}>
-                      <img src={product.images[0]} alt={product.name} className="w-24 h-24 object-cover rounded-lg mx-auto mb-2" />
+                      <img
+                        src={getSafeProductImage(product)}
+                        alt={product.name}
+                        onError={(event) => handleProductImageError(event, product)}
+                        className="w-24 h-24 object-cover rounded-lg mx-auto mb-2"
+                      />
                       <p className="text-sm font-medium hover:text-primary line-clamp-2">{product.name}</p>
                     </Link>
                   </div>

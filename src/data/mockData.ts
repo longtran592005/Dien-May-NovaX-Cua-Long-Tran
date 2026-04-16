@@ -2,187 +2,179 @@ import { Product, Category, Review } from "@/types/product";
 
 export const categories: Category[] = [
   {
-    id: "1", name: "Điện thoại", slug: "dien-thoai", icon: "📱",
+    id: "1", name: "Tivi", slug: "tivi", icon: "📺",
     subcategories: [
-      { id: "1a", name: "iPhone", slug: "iphone" },
-      { id: "1b", name: "Samsung", slug: "samsung" },
-      { id: "1c", name: "Xiaomi", slug: "xiaomi" },
-      { id: "1d", name: "OPPO", slug: "oppo" },
+      { id: "1a", name: "QLED 4K", slug: "qled-4k" },
+      { id: "1b", name: "OLED 4K", slug: "oled-4k" },
+      { id: "1c", name: "Mini LED", slug: "mini-led" },
+      { id: "1d", name: "Smart TV", slug: "smart-tv" },
     ]
   },
   {
-    id: "2", name: "Laptop", slug: "laptop", icon: "💻",
+    id: "2", name: "Tủ lạnh", slug: "tu-lanh", icon: "🧊",
     subcategories: [
-      { id: "2a", name: "MacBook", slug: "macbook" },
-      { id: "2b", name: "Dell", slug: "dell" },
-      { id: "2c", name: "HP", slug: "hp" },
-      { id: "2d", name: "Lenovo", slug: "lenovo" },
+      { id: "2a", name: "Inverter", slug: "inverter" },
+      { id: "2b", name: "Side by Side", slug: "side-by-side" },
+      { id: "2c", name: "Multi Door", slug: "multi-door" },
+      { id: "2d", name: "Top Freezer", slug: "top-freezer" },
     ]
   },
   {
-    id: "3", name: "Máy tính bảng", slug: "may-tinh-bang", icon: "📟",
+    id: "3", name: "Máy giặt", slug: "may-giat", icon: "🫧",
     subcategories: [
-      { id: "3a", name: "iPad", slug: "ipad" },
-      { id: "3b", name: "Samsung Tab", slug: "samsung-tab" },
+      { id: "3a", name: "Cửa trên", slug: "cua-tren" },
+      { id: "3b", name: "Cửa trước", slug: "cua-truoc" },
+      { id: "3c", name: "Sấy", slug: "say" },
+      { id: "3d", name: "Inverter", slug: "inverter-washer" },
     ]
   },
   {
-    id: "4", name: "Tivi", slug: "tivi", icon: "📺",
+    id: "4", name: "Điều hòa", slug: "dieu-hoa", icon: "❄️",
     subcategories: [
-      { id: "4a", name: "Samsung", slug: "samsung-tv" },
-      { id: "4b", name: "LG", slug: "lg-tv" },
-      { id: "4c", name: "Sony", slug: "sony-tv" },
+      { id: "4a", name: "1 chiều", slug: "1-chieu" },
+      { id: "4b", name: "2 chiều", slug: "2-chieu" },
+      { id: "4c", name: "Multi split", slug: "multi-split" },
+      { id: "4d", name: "Wifi", slug: "wifi" },
     ]
   },
   {
-    id: "5", name: "Tủ lạnh", slug: "tu-lanh", icon: "🧊",
+    id: "5", name: "Gia dụng", slug: "gia-dung", icon: "🍳",
     subcategories: [
-      { id: "5a", name: "Samsung", slug: "samsung-fridge" },
-      { id: "5b", name: "Panasonic", slug: "panasonic-fridge" },
+      { id: "5a", name: "Nồi cơm", slug: "noi-com" },
+      { id: "5b", name: "Bếp từ", slug: "bep-tu" },
+      { id: "5c", name: "Nồi chiên", slug: "noi-chien" },
+      { id: "5d", name: "Máy xay", slug: "may-xay" },
     ]
   },
   {
-    id: "6", name: "Máy giặt", slug: "may-giat", icon: "🫧",
+    id: "6", name: "Điện thoại", slug: "dien-thoai", icon: "📱",
     subcategories: [
-      { id: "6a", name: "LG", slug: "lg-washer" },
-      { id: "6b", name: "Electrolux", slug: "electrolux" },
+      { id: "6a", name: "Samsung", slug: "samsung" },
+      { id: "6b", name: "Xiaomi", slug: "xiaomi" },
+      { id: "6c", name: "OPPO", slug: "oppo" },
+      { id: "6d", name: "vivo", slug: "vivo" },
     ]
   },
   {
-    id: "7", name: "Điều hòa", slug: "dieu-hoa", icon: "❄️",
+    id: "7", name: "Laptop", slug: "laptop", icon: "💻",
     subcategories: [
-      { id: "7a", name: "Daikin", slug: "daikin" },
-      { id: "7b", name: "Panasonic", slug: "panasonic-ac" },
+      { id: "7a", name: "Dell", slug: "dell" },
+      { id: "7b", name: "HP", slug: "hp" },
+      { id: "7c", name: "Lenovo", slug: "lenovo" },
+      { id: "7d", name: "ASUS", slug: "asus" },
     ]
   },
   {
-    id: "8", name: "Gia dụng", slug: "gia-dung", icon: "🍳",
+    id: "8", name: "Máy tính bảng", slug: "may-tinh-bang", icon: "📟",
     subcategories: [
-      { id: "8a", name: "Nồi cơm", slug: "noi-com" },
-      { id: "8b", name: "Bếp từ", slug: "bep-tu" },
-      { id: "8c", name: "Máy xay", slug: "may-xay" },
-    ]
-  },
-  {
-    id: "9", name: "Phụ kiện", slug: "phu-kien", icon: "🎧",
-    subcategories: [
-      { id: "9a", name: "Tai nghe", slug: "tai-nghe" },
-      { id: "9b", name: "Sạc & Cáp", slug: "sac-cap" },
-      { id: "9c", name: "Chuột & Bàn phím", slug: "chuot-ban-phim" },
+      { id: "8a", name: "Samsung", slug: "samsung-tab" },
+      { id: "8b", name: "Xiaomi", slug: "xiaomi-pad" },
+      { id: "8c", name: "Lenovo", slug: "lenovo-tab" },
+      { id: "8d", name: "Honor", slug: "honor-tab" },
     ]
   },
 ];
 
-export const products: Product[] = [
+const categoryImageTerms: Record<string, string> = {
+  tivi: "television,smart-tv",
+  "tu-lanh": "refrigerator,kitchen-appliance",
+  "may-giat": "washing-machine,laundry-appliance",
+  "dieu-hoa": "air-conditioner,home-appliance",
+  "gia-dung": "home-appliance,kitchen-electric",
+  "dien-thoai": "smartphone,mobile-phone",
+  laptop: "laptop,notebook-computer",
+  "may-tinh-bang": "tablet,touchscreen-device",
+};
+
+const normalizeKeyword = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+const buildLicensedImageUrl = (product: Product, index: number): string => {
+  const categoryTerms = categoryImageTerms[product.category] ?? "electronics,product";
+  const brand = normalizeKeyword(product.brand);
+  const model = normalizeKeyword(product.slug).replace(/-/g, ",");
+  return `https://source.unsplash.com/800x800/?${categoryTerms},${brand},${model}&sig=${index + 1}`;
+};
+
+const baseProducts: Product[] = [
   {
-    id: "p1", name: "iPhone 15 Pro Max 256GB", slug: "iphone-15-pro-max",
-    price: 29990000, originalPrice: 34990000, discount: 14,
-    images: ["https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&h=400&fit=crop"],
-    category: "dien-thoai", subcategory: "iphone", brand: "Apple",
-    rating: 4.8, reviewCount: 1250, inStock: true, isBestSeller: true,
-    specs: { "Màn hình": "6.7 inch", "Chip": "A17 Pro", "RAM": "8GB", "Pin": "4422 mAh" },
-    description: "iPhone 15 Pro Max với chip A17 Pro mạnh mẽ, camera 48MP, khung Titanium."
-  },
-  {
-    id: "p2", name: "Samsung Galaxy S24 Ultra", slug: "samsung-galaxy-s24-ultra",
-    price: 27990000, originalPrice: 33990000, discount: 18,
-    images: ["https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop"],
-    category: "dien-thoai", subcategory: "samsung", brand: "Samsung",
-    rating: 4.7, reviewCount: 890, inStock: true, isBestSeller: true,
-    specs: { "Màn hình": "6.8 inch", "Chip": "Snapdragon 8 Gen 3", "RAM": "12GB", "Pin": "5000 mAh" },
-    description: "Galaxy S24 Ultra với S-Pen, AI Galaxy thông minh."
-  },
-  {
-    id: "p3", name: "MacBook Air M3 15 inch", slug: "macbook-air-m3",
-    price: 32990000, originalPrice: 37990000, discount: 13,
-    images: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop"],
-    category: "laptop", subcategory: "macbook", brand: "Apple",
-    rating: 4.9, reviewCount: 456, inStock: true, isNew: true,
-    specs: { "Màn hình": "15.3 inch", "Chip": "M3", "RAM": "8GB", "SSD": "256GB" },
-    description: "MacBook Air M3 siêu mỏng nhẹ, hiệu năng vượt trội."
-  },
-  {
-    id: "p4", name: "iPad Pro M4 11 inch", slug: "ipad-pro-m4",
-    price: 25990000, originalPrice: 28990000, discount: 10,
-    images: ["https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop"],
-    category: "may-tinh-bang", subcategory: "ipad", brand: "Apple",
-    rating: 4.8, reviewCount: 320, inStock: true, isNew: true,
-    specs: { "Màn hình": "11 inch", "Chip": "M4", "RAM": "8GB" },
-    description: "iPad Pro M4 với màn hình OLED tandem, mỏng nhất từ trước đến nay."
-  },
-  {
-    id: "p5", name: "TV Samsung OLED 4K 55 inch", slug: "tv-samsung-oled-55",
-    price: 18990000, originalPrice: 24990000, discount: 24,
+    id: "p1", name: "Samsung QLED 4K 43 inch", slug: "tivi-samsung-qled-43",
+    price: 6990000, originalPrice: 7900000, discount: 12,
     images: ["https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&h=400&fit=crop"],
-    category: "tivi", subcategory: "samsung-tv", brand: "Samsung",
+    category: "tivi", subcategory: "qled-4k", brand: "Samsung",
     rating: 4.6, reviewCount: 210, inStock: true, isBestSeller: true,
-    specs: { "Kích thước": "55 inch", "Độ phân giải": "4K OLED", "Smart TV": "Tizen" },
-    description: "TV Samsung OLED 4K với hình ảnh sắc nét tuyệt đối."
+    specs: { "Kích thước": "43 inch", "Độ phân giải": "4K QLED" },
+    description: "TV Samsung QLED 4K 43 inch với hình ảnh sắc nét."
   },
   {
-    id: "p6", name: "Xiaomi 14 Ultra", slug: "xiaomi-14-ultra",
-    price: 19990000, originalPrice: 23990000, discount: 17,
-    images: ["https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400&h=400&fit=crop"],
-    category: "dien-thoai", subcategory: "xiaomi", brand: "Xiaomi",
-    rating: 4.5, reviewCount: 560, inStock: true,
-    specs: { "Màn hình": "6.73 inch", "Chip": "Snapdragon 8 Gen 3", "RAM": "16GB" },
-    description: "Xiaomi 14 Ultra với camera Leica chuyên nghiệp."
-  },
-  {
-    id: "p7", name: "Dell XPS 15 2024", slug: "dell-xps-15",
-    price: 35990000, originalPrice: 39990000, discount: 10,
-    images: ["https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&h=400&fit=crop"],
-    category: "laptop", subcategory: "dell", brand: "Dell",
-    rating: 4.7, reviewCount: 180, inStock: true,
-    specs: { "Màn hình": "15.6 inch OLED", "CPU": "Intel i7-14700H", "RAM": "16GB" },
-    description: "Dell XPS 15 với thiết kế premium, màn hình OLED."
-  },
-  {
-    id: "p8", name: "Tủ lạnh Samsung Inverter 380L", slug: "tu-lanh-samsung-380l",
-    price: 10990000, originalPrice: 14990000, discount: 27,
+    id: "p2", name: "Samsung Inverter 260L", slug: "tu-lanh-samsung-inverter-260l",
+    price: 5990000, originalPrice: 6800000, discount: 12,
     images: ["https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400&h=400&fit=crop"],
-    category: "tu-lanh", subcategory: "samsung-fridge", brand: "Samsung",
+    category: "tu-lanh", subcategory: "inverter", brand: "Samsung",
     rating: 4.4, reviewCount: 340, inStock: true, isBestSeller: true,
-    specs: { "Dung tích": "380L", "Công nghệ": "Digital Inverter" },
-    description: "Tủ lạnh Samsung Inverter tiết kiệm điện, dung tích lớn."
+    specs: { "Dung tích": "260L", "Công nghệ": "Digital Inverter" },
+    description: "Tủ lạnh Samsung Inverter tiết kiệm điện, dung tích phù hợp gia đình."
   },
   {
-    id: "p9", name: "Máy giặt LG Inverter 9kg", slug: "may-giat-lg-9kg",
-    price: 7490000, originalPrice: 9990000, discount: 25,
+    id: "p3", name: "LG máy giặt cửa trước 9kg", slug: "may-giat-lg-cua-truoc-9kg",
+    price: 4890000, originalPrice: 6500000, discount: 25,
     images: ["https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400&h=400&fit=crop"],
-    category: "may-giat", subcategory: "lg-washer", brand: "LG",
-    rating: 4.5, reviewCount: 520, inStock: true,
+    category: "may-giat", subcategory: "cua-truoc", brand: "LG",
+    rating: 4.5, reviewCount: 520, inStock: true, isBestSeller: true,
     specs: { "Khối lượng giặt": "9kg", "Công nghệ": "AI DD™" },
-    description: "Máy giặt LG AI DD™ nhận diện vải thông minh."
+    description: "Máy giặt LG AI DD™ nhận diện vải thông minh, giặt sạch nhẹ nhàng."
   },
   {
-    id: "p10", name: "AirPods Pro 2 USB-C", slug: "airpods-pro-2",
-    price: 5490000, originalPrice: 6790000, discount: 19,
-    images: ["https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=400&h=400&fit=crop"],
-    category: "phu-kien", subcategory: "tai-nghe", brand: "Apple",
-    rating: 4.8, reviewCount: 2100, inStock: true, isBestSeller: true,
-    specs: { "Chống ồn": "ANC chủ động", "Chip": "H2", "Pin": "6h" },
-    description: "AirPods Pro 2 với chống ồn chủ động, âm thanh không gian."
-  },
-  {
-    id: "p11", name: "Điều hòa Daikin Inverter 1HP", slug: "dieu-hoa-daikin-1hp",
-    price: 8990000, originalPrice: 11990000, discount: 25,
+    id: "p4", name: "Daikin điều hòa Inverter 1HP", slug: "dieu-hoa-daikin-inverter-1hp",
+    price: 6490000, originalPrice: 8650000, discount: 25,
     images: ["https://images.unsplash.com/photo-1585338107529-13afc25806f9?w=400&h=400&fit=crop"],
-    category: "dieu-hoa", subcategory: "daikin", brand: "Daikin",
-    rating: 4.6, reviewCount: 410, inStock: true,
+    category: "dieu-hoa", subcategory: "1-chieu", brand: "Daikin",
+    rating: 4.6, reviewCount: 410, inStock: true, isNew: true,
     specs: { "Công suất": "1HP", "Công nghệ": "Inverter" },
-    description: "Điều hòa Daikin Inverter tiết kiệm điện, làm lạnh nhanh."
+    description: "Điều hòa Daikin Inverter 1HP tiết kiệm điện, làm lạnh nhanh."
   },
   {
-    id: "p12", name: "Nồi cơm điện Cuckoo 1.8L", slug: "noi-com-cuckoo",
-    price: 2990000, originalPrice: 3990000, discount: 25,
+    id: "p5", name: "Sharp nồi cơm 1.8L", slug: "noi-com-sharp-1-8l",
+    price: 890000, originalPrice: 1190000, discount: 25,
     images: ["https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=400&fit=crop"],
-    category: "gia-dung", subcategory: "noi-com", brand: "Cuckoo",
+    category: "gia-dung", subcategory: "noi-com", brand: "Sharp",
     rating: 4.3, reviewCount: 670, inStock: true,
     specs: { "Dung tích": "1.8L", "Lòng nồi": "Chống dính" },
-    description: "Nồi cơm điện Cuckoo cao cấp Hàn Quốc."
+    description: "Nồi cơm điện Sharp cao cấp với công nghệ lòng nồi chống dính."
+  },
+  {
+    id: "p6", name: "Samsung Galaxy 8GB/256GB", slug: "dien-thoai-samsung-8gb-256gb",
+    price: 3990000, originalPrice: 4540000, discount: 12,
+    images: ["https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&h=400&fit=crop"],
+    category: "dien-thoai", subcategory: "samsung", brand: "Samsung",
+    rating: 4.5, reviewCount: 560, inStock: true, isBestSeller: true,
+    specs: { "Màn hình": "6.5 inch", "RAM": "8GB", "Storage": "256GB" },
+    description: "Samsung Galaxy với cấu hình mạnh mẽ, camera chất lượng cao."
+  },
+  {
+    id: "p7", name: "Dell Core i5 16GB 512GB", slug: "laptop-dell-i5-16gb-512gb",
+    price: 10990000, originalPrice: 12200000, discount: 10,
+    images: ["https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop"],
+    category: "laptop", subcategory: "dell", brand: "Dell",
+    rating: 4.7, reviewCount: 180, inStock: true, isBestSeller: true,
+    specs: { "Màn hình": "15.6 inch", "CPU": "Intel i5", "RAM": "16GB", "SSD": "512GB" },
+    description: "Dell XPS với hiệu năng tốt, thiết kế đẹp, giá hợp lý."
+  },
+  {
+    id: "p8", name: "Samsung Pad 8GB 128GB", slug: "may-tinh-bang-samsung-8gb-128gb",
+    price: 4490000, originalPrice: 5100000, discount: 12,
+    images: ["https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=400&fit=crop"],
+    category: "may-tinh-bang", subcategory: "samsung-tab", brand: "Samsung",
+    rating: 4.5, reviewCount: 280, inStock: true, isNew: true,
+    specs: { "Màn hình": "11 inch", "RAM": "8GB", "Storage": "128GB" },
+    description: "Máy tính bảng Samsung với màn hình sắc nét, hiệu năng mạnh."
   },
 ];
+
+export const products: Product[] = baseProducts.map((product, index) => ({
+  ...product,
+  images: [buildLicensedImageUrl(product, index)],
+}));
 
 export const reviews: Review[] = [
   { id: "r1", userName: "Nguyễn Văn A", rating: 5, comment: "Sản phẩm rất tốt, giao hàng nhanh!", date: "2024-03-15", sentiment: "positive", helpful: 24 },

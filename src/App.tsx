@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -40,79 +41,83 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "PLACEHOLDER.apps.googleusercontent.com";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <ComparisonProvider>
-              <NotificationProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <div className="min-h-screen flex flex-col">
-                    <AnnouncementBar />
-                    <Header />
-                    <main className="flex-1">
-                      <Routes>
-                        <Route path="/" element={<Homepage />} />
-                        <Route path="/products" element={<ProductListing />} />
-                        <Route path="/product/:slug" element={<ProductDetail />} />
-                        <Route path="/cart" element={<CartPage />} />
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/register" element={<RegisterPage />} />
-                        <Route path="/verify-email" element={<VerifyEmailPage />} />
-                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                        <Route path="/order-tracking" element={<OrderTrackingPage />} />
-                        <Route path="/comparison" element={<ComparisonPage />} />
-                        <Route path="/blog" element={<BlogPage />} />
-                        <Route path="/stores" element={<StoreLocatorPage />} />
-                        <Route path="/policy" element={<PolicyPage />} />
-                        <Route
-                          path="/admin"
-                          element={
-                            <AdminRoute>
-                              <AdminLayout />
-                            </AdminRoute>
-                          }
-                        >
-                          <Route index element={<AdminDashboard />} />
-                          <Route path="products" element={<AdminProductsPage />} />
-                          <Route path="orders" element={<AdminOrdersPage />} />
-                          <Route path="orders/:id" element={<AdminOrderDetailPage />} />
-                          <Route path="users" element={<AdminUsersPage />} />
-                        </Route>
-                        <Route
-                          path="/checkout"
-                          element={
-                            <ProtectedRoute>
-                              <CheckoutPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/profile"
-                          element={
-                            <ProtectedRoute>
-                              <ProfilePage />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
-                    <Footer />
-                    <ComparisonBar />
-                    <ChatWidget />
-                  </div>
-                </BrowserRouter>
-              </NotificationProvider>
-            </ComparisonProvider>
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
-    </TooltipProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <TooltipProvider>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <ComparisonProvider>
+                <NotificationProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <div className="min-h-screen flex flex-col">
+                      <AnnouncementBar />
+                      <Header />
+                      <main className="flex-1">
+                        <Routes>
+                          <Route path="/" element={<Homepage />} />
+                          <Route path="/products" element={<ProductListing />} />
+                          <Route path="/product/:slug" element={<ProductDetail />} />
+                          <Route path="/cart" element={<CartPage />} />
+                          <Route path="/login" element={<LoginPage />} />
+                          <Route path="/register" element={<RegisterPage />} />
+                          <Route path="/verify-email" element={<VerifyEmailPage />} />
+                          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                          <Route path="/order-tracking" element={<OrderTrackingPage />} />
+                          <Route path="/comparison" element={<ComparisonPage />} />
+                          <Route path="/blog" element={<BlogPage />} />
+                          <Route path="/stores" element={<StoreLocatorPage />} />
+                          <Route path="/policy" element={<PolicyPage />} />
+                          <Route
+                            path="/admin"
+                            element={
+                              <AdminRoute>
+                                <AdminLayout />
+                              </AdminRoute>
+                            }
+                          >
+                            <Route index element={<AdminDashboard />} />
+                            <Route path="products" element={<AdminProductsPage />} />
+                            <Route path="orders" element={<AdminOrdersPage />} />
+                            <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+                            <Route path="users" element={<AdminUsersPage />} />
+                          </Route>
+                          <Route
+                            path="/checkout"
+                            element={
+                              <ProtectedRoute>
+                                <CheckoutPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/profile"
+                            element={
+                              <ProtectedRoute>
+                                <ProfilePage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                      <Footer />
+                      <ComparisonBar />
+                      <ChatWidget />
+                    </div>
+                  </BrowserRouter>
+                </NotificationProvider>
+              </ComparisonProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </GoogleOAuthProvider>
   </QueryClientProvider>
 );
 

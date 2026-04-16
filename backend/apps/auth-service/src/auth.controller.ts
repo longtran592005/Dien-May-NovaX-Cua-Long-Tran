@@ -143,4 +143,13 @@ export class AuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.email, dto.otpCode, dto.newPassword);
   }
+
+  /**
+   * Google OAuth Login
+   * POST /auth/google
+   */
+  @Post('google')
+  async googleLogin(@Body('idToken') idToken: string) {
+    return this.authService.googleLogin(idToken);
+  }
 }

@@ -134,7 +134,7 @@ export class CatalogService {
       });
 
       if (!item) {
-        return null;
+        return fallbackProducts.find((fallbackItem) => fallbackItem.slug === slug) || null;
       }
 
       const typedItem = item as unknown as CatalogDbProduct;

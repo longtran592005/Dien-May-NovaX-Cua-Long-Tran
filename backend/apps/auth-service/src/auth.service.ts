@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { PrismaService } from './prisma.service';
 import Redis from 'ioredis';
+import { OAuth2Client } from 'google-auth-library';
 
 const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:4070';
 
@@ -28,6 +29,8 @@ export class AuthService {
   private readonly refreshTtlSeconds = this.parseDurationToSeconds(process.env.JWT_REFRESH_TTL || '30d');
   
   private readonly redis: Redis;
+
+  private readonly googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   constructor(private readonly prisma: PrismaService) {
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
@@ -228,12 +231,71 @@ export class AuthService {
     }
 
     // Compare passwords
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash || '');
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     return this.issueTokens(user.id, user.email, user.fullName || '');
+  }
+
+  /**
+   * Login or signup with Google ID Token
+   */
+  async googleLogin(idToken: string) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Invalid Google token');
+      }
+
+      const { email, sub: googleId, name, picture } = payload;
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Find user by googleId or email
+      let user = await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { googleId },
+            { email: normalizedEmail }
+          ]
+        }
+      });
+
+      if (!user) {
+        // Create new user (auto-verified since it's from Google)
+        user = await this.prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            fullName: name || '',
+            googleId,
+            verified: true,
+            carts: {
+              create: {}
+            }
+          }
+        });
+      } else if (!user.googleId) {
+        // Link existing email-based user to Google account
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            googleId,
+            verified: true // Auto-verify if they managed to log in via Google with this email
+          }
+        });
+      }
+
+      return this.issueTokens(user.id, user.email, user.fullName || '');
+    } catch (error) {
+      console.error('Google Login Error:', error);
+      throw new UnauthorizedException('Google authentication failed');
+    }
   }
 
   /**
@@ -573,3 +635,4 @@ export class AuthService {
     }
   }
 }
+

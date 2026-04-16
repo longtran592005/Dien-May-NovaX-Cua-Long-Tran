@@ -286,6 +286,24 @@ export class GatewayController {
     return body;
   }
 
+  @Post('auth/google')
+  async googleLogin(@Body() payload: { idToken: string }) {
+    const response = await fetch(new URL('/auth/google', authServiceUrl), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const body = (await response.json()) as unknown;
+    if (!response.ok) {
+      throw new UnauthorizedException(body as object);
+    }
+
+    return body;
+  }
+
   @Post('auth/refresh')
   async refresh(@Body() payload: { refreshToken: string }) {
     const response = await fetch(new URL('/auth/refresh', authServiceUrl), {

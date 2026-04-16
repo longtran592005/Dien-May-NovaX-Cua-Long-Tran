@@ -70,7 +70,10 @@ export default function AdminDashboard() {
     [analytics]
   );
 
-  const topStatus = analytics?.statusBreakdown.reduce((best, current) => (current.count > best.count ? current : best), analytics.statusBreakdown[0]);
+  const topStatus = useMemo(() => {
+    if (!analytics || !analytics.statusBreakdown || analytics.statusBreakdown.length === 0) return null;
+    return analytics.statusBreakdown.reduce((best, current) => (current.count > best.count ? current : best), analytics.statusBreakdown[0]);
+  }, [analytics]);
 
   return (
     <div className="space-y-6">

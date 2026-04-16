@@ -19,11 +19,11 @@
     --primary: 226 100% 55%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 214 32% 91%;
+    --secondary: 214 28% 93%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 214 28% 93%;
+    --muted-foreground: 215 18% 35%;
 
     /* Vibrant Orange/Red for calls to action */
     --accent: 12 90% 58%;
@@ -32,8 +32,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 24% 84%;
+    --input: 214 24% 84%;
     --ring: 226 100% 55%;
 
     /* Softer radius for premium feel */
@@ -46,19 +46,19 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    
+
     /* Modern Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(226, 100%, 65%), hsl(226, 100%, 50%));
     --gradient-accent: linear-gradient(135deg, hsl(12, 100%, 65%), hsl(12, 90%, 50%));
     --gradient-hero: linear-gradient(135deg, hsl(230, 20%, 15%), hsl(220, 20%, 10%));
-    --gradient-shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    
+    --gradient-shimmer: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+
     /* Deep multi-layered shadows */
     --shadow-soft: 0 4px 20px -2px hsl(220 20% 10% / 0.05);
     --shadow-card: 0 8px 30px -4px hsl(220 20% 10% / 0.08);
     --shadow-hover: 0 20px 40px -8px hsl(220 20% 10% / 0.15);
     --shadow-float: 0 30px 60px -12px hsl(226 100% 55% / 0.25);
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    --shadow-glass: 0 8px 24px 0 rgba(15, 23, 42, 0.08);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -102,10 +102,12 @@
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
     font-family: 'Outfit', sans-serif;
+    text-rendering: optimizeLegibility;
   }
 }
 
 @layer components {
+
   /* Premium Hover Effects */
   .card-hover {
     @apply transition-all duration-500 hover:shadow-[var(--shadow-hover)] hover:-translate-y-2;
@@ -113,11 +115,11 @@
 
   /* Glassmorphism Utilities */
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[var(--shadow-glass)] dark:bg-black/50 dark:border-white/10;
+    @apply bg-white/90 backdrop-blur-[2px] border border-slate-200/90 shadow-[var(--shadow-glass)] dark:bg-slate-950/80 dark:border-slate-700/70;
   }
-  
+
   .glass-dark {
-    @apply bg-black/60 backdrop-blur-xl border border-white/10 shadow-[var(--shadow-glass)];
+    @apply bg-black/82 backdrop-blur-sm border border-white/20 shadow-[var(--shadow-glass)];
   }
 
   /* Text Gradients */
@@ -171,18 +173,35 @@
 
   /* Custom Animations */
   @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-12px); }
-    100% { transform: translateY(0px); }
+    0% {
+      transform: translateY(0px);
+    }
+
+    50% {
+      transform: translateY(-12px);
+    }
+
+    100% {
+      transform: translateY(0px);
+    }
   }
 
   @keyframes fade-up {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes shimmer {
-    100% { transform: translateX(100%); }
+    100% {
+      transform: translateX(100%);
+    }
   }
 
   .animate-float {

@@ -69,6 +69,21 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return response.json() as Promise<LoginResponse>;
 }
 
+export async function googleLogin(idToken: string): Promise<LoginResponse> {
+  const response = await fetch(buildUrl('auth/google'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken })
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Google login failed');
+  }
+
+  return response.json() as Promise<LoginResponse>;
+}
+
 export async function register(email: string, password: string, fullName: string): Promise<RegisterResponse> {
   const response = await fetch(buildUrl('auth/register'), {
     method: 'POST',

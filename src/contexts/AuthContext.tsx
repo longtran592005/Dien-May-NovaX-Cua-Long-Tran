@@ -3,6 +3,7 @@ import {
   AuthUser,
   clearStoredTokens,
   login as loginApi,
+  googleLogin as googleLoginApi,
   logout as logoutApi,
   me,
   refresh,
@@ -14,6 +15,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -52,6 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(result.user);
   }, []);
 
+  const googleLogin = useCallback(async (idToken: string) => {
+    const result = await googleLoginApi(idToken);
+    setStoredTokens(result.accessToken, result.refreshToken);
+    setUser(result.user);
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutApi();
     setUser(null);
@@ -63,9 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user),
       isLoading,
       login,
+      googleLogin,
       logout
     }),
-    [user, isLoading, login, logout]
+    [user, isLoading, login, googleLogin, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

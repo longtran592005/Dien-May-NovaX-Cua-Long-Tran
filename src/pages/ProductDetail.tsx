@@ -10,6 +10,7 @@ import RecommendationSection from "@/components/RecommendationSection";
 import { Product } from "@/types/product";
 import { Review } from "@/types/product";
 import { fetchProductBySlug, fetchProducts } from "@/services/catalogApi";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -53,8 +54,9 @@ const ProductDetail = () => {
       } catch (err) {
         if (isMounted) {
           console.error("Failed to load product detail:", err);
-          setProduct(null);
-          setAllProducts([]);
+          const fallbackDetail = fallbackProducts.find((item) => item.slug === slug) || null;
+          setProduct(fallbackDetail);
+          setAllProducts(fallbackProducts);
         }
       } finally {
         if (isMounted) {
@@ -137,6 +139,8 @@ const ProductDetail = () => {
     { key: "reviews" as const, label: `Đánh giá (${userReviews.length})` },
   ];
 
+  const productImages = product.images.length > 0 ? product.images : [getSafeProductImage(product)];
+
   return (
     <div className="animate-fade-up">
       {/* Premium Breadcrumb bar */}
@@ -160,8 +164,9 @@ const ProductDetail = () => {
             <div className="sticky top-32">
               <div className="bg-secondary/20 rounded-[2.5rem] border border-border/30 overflow-hidden mb-4 relative group p-8 lg:p-16 flex items-center justify-center aspect-square shadow-inner">
                 <img
-                  src={product.images[selectedImage]}
+                  src={productImages[selectedImage] || productImages[0]}
                   alt={product.name}
+                  onError={(event) => handleProductImageError(event, product, selectedImage)}
                   className="w-full max-h-[500px] object-contain group-hover:scale-110 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
                 />
                 
@@ -192,10 +197,15 @@ const ProductDetail = () => {
               
               {/* Thumbnails */}
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide justify-center">
-                {product.images.map((img, i) => (
+                {productImages.map((img, i) => (
                   <button key={i} onClick={() => setSelectedImage(i)}
                     className={`shrink-0 w-20 h-20 rounded-2xl p-2 transition-all duration-300 ${i === selectedImage ? 'bg-secondary/40 border-2 border-primary shadow-soft' : 'bg-transparent border border-border hover:bg-secondary/20'}`}>
-                    <img src={img} alt="" className="w-full h-full object-contain" />
+                    <img
+                      src={img}
+                      alt=""
+                      onError={(event) => handleProductImageError(event, product, i)}
+                      className="w-full h-full object-contain"
+                    />
                   </button>
                 ))}
               </div>

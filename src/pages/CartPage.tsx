@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/data/mockData";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const CartPage = () => {
   const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
@@ -40,7 +41,12 @@ const CartPage = () => {
           {items.map(item => (
             <div key={item.product.id} className="bg-card rounded-xl border border-border p-4 flex gap-4">
               <Link to={`/product/${item.product.slug}`}>
-                <img src={item.product.images[0]} alt={item.product.name} className="w-20 h-20 md:w-24 md:h-24 rounded-lg object-cover" />
+                <img
+                  src={getSafeProductImage(item.product)}
+                  alt={item.product.name}
+                  onError={(event) => handleProductImageError(event, item.product)}
+                  className="w-20 h-20 md:w-24 md:h-24 rounded-lg object-cover"
+                />
               </Link>
               <div className="flex-1 min-w-0">
                 <Link to={`/product/${item.product.slug}`} className="font-medium text-sm hover:text-primary line-clamp-2">{item.product.name}</Link>

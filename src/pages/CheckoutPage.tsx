@@ -6,6 +6,7 @@ import { createOrder } from '@/services/orderApi';
 import { initiatePayment, PaymentMethod } from '@/services/paymentApi';
 import { formatPrice } from '@/data/mockData';
 import { useCoupon } from '@/hooks/useCoupon';
+import { getSafeProductImage, handleProductImageError } from '@/lib/productImage';
 import { MapPin, Tag, X, CreditCard, Banknote, Smartphone } from 'lucide-react';
 
 export default function CheckoutPage() {
@@ -201,7 +202,12 @@ export default function CheckoutPage() {
             <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
               {items.map((item) => (
                 <div key={item.product.id} className="flex items-center gap-3">
-                  <img src={item.product.images[0]} alt={item.product.name} className="w-14 h-14 rounded-lg object-cover" />
+                  <img
+                    src={getSafeProductImage(item.product)}
+                    alt={item.product.name}
+                    onError={(event) => handleProductImageError(event, item.product)}
+                    className="w-14 h-14 rounded-lg object-cover"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{item.product.name}</p>
                     <p className="text-xs text-muted-foreground">x{item.quantity}</p>

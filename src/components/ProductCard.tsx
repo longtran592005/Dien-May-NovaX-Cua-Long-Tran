@@ -5,6 +5,7 @@ import { formatPrice } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useComparison } from "@/contexts/ComparisonContext";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 interface ProductCardProps {
   product: Product;
@@ -21,8 +22,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <div className="bg-card rounded-[2rem] border border-border/40 shadow-soft card-hover group overflow-hidden flex flex-col p-2 relative">
       <Link to={`/product/${product.slug}`} className="relative overflow-hidden rounded-[1.5rem] bg-secondary/30 block">
         <img
-          src={product.images[0]}
+          src={getSafeProductImage(product)}
           alt={product.name}
+          onError={(event) => handleProductImageError(event, product)}
           className="w-full aspect-square object-cover group-hover:scale-110 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
           loading="lazy"
         />

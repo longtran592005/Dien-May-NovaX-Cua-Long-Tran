@@ -40,7 +40,8 @@ model User {
   email              String    @unique
   phone              String?
   fullName           String?
-  passwordHash       String
+  passwordHash       String?
+  googleId           String?   @unique
   role               UserRole  @default(customer)
   verified           Boolean   @default(false)
   confirmationCode   String?

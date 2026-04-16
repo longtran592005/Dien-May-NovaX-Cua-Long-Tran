@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { X, GitCompare } from "lucide-react";
 import { useComparison } from "@/contexts/ComparisonContext";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const ComparisonBar = () => {
   const { items, removeFromComparison, clearComparison, setComparisonOpen, isComparisonOpen } = useComparison();
@@ -19,7 +20,12 @@ const ComparisonBar = () => {
             <div className="flex gap-2">
               {items.map(product => (
                 <div key={product.id} className="relative group">
-                  <img src={product.images[0]} alt={product.name} className="w-12 h-12 rounded-lg object-cover border border-border" />
+                  <img
+                    src={getSafeProductImage(product)}
+                    alt={product.name}
+                    onError={(event) => handleProductImageError(event, product)}
+                    className="w-12 h-12 rounded-lg object-cover border border-border"
+                  />
                   <button
                     onClick={() => removeFromComparison(product.id)}
                     className="absolute -top-1.5 -right-1.5 bg-card rounded-full p-0.5 shadow border border-border opacity-0 group-hover:opacity-100 transition-opacity"
