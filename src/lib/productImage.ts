@@ -2,58 +2,63 @@ import type { SyntheticEvent } from "react";
 import type { Product } from "@/types/product";
 
 const localImageBySlug: Record<string, string> = {
-  "iphone-15-pro-max-256gb": "/images/products/dien-thoai/iphone-15-pro-max-256gb.png",
-  "samsung-galaxy-s24-ultra": "/images/products/dien-thoai/samsung-galaxy-s24-ultra.png",
-  "macbook-air-15-m2": "/images/products/laptop/macbook-air-15-m2.png",
-  "tivi-samsung-qled-4k-65-inch-qa65q60c": "/images/products/tivi/tivi-samsung-qled-4k-65-inch-qa65q60c.png",
-  "tivi-lg-4k-55-inch-55ur8050psb": "/images/products/tivi/tivi-lg-4k-55-inch-55ur8050psb.png",
-  "tu-lanh-samsung-inverter-382-lit-rt38cg6584b1sv": "/images/products/tu-lanh/tu-lanh-samsung-inverter-382-lit-rt38cg6584b1sv.png",
-  "tu-lanh-aqua-inverter-189-lit-aqr-t219fa-pb": "/images/products/tu-lanh/tu-lanh-aqua-inverter-189-lit-aqr-t219fa-pb.png",
-  "may-lanh-daikin-inverter-1-hp-atkf25xvmv": "/images/products/dieu-hoa/may-lanh-daikin-inverter-1-hp-atkf25xvmv.png",
-  "may-lanh-panasonic-inverter-1-hp-cu-cs-pu9xkh-8m": "/images/products/dieu-hoa/may-lanh-panasonic-inverter-1-hp-cu-cs-pu9xkh-8m.png",
-  "may-giat-lg-ai-dd-inverter-10-kg-fv1410s4p": "/images/products/may-giat/may-giat-lg-ai-dd-inverter-10-kg-fv1410s4p.png",
-  "may-giat-electrolux-inverter-9-kg-ewf9024p5wb": "/images/products/may-giat/may-giat-electrolux-inverter-9-kg-ewf9024p5wb.png",
-  "noi-com-dien-tu-sharp-18-lit-ks-com18v": "/images/products/gia-dung/noi-com-dien-tu-sharp-18-lit-ks-com18v.png",
-  "lo-vi-song-sharp-20-lit": "/images/products/gia-dung/lo-vi-song-sharp-20-lit.png",
-  "oppo-reno11-f-5g": "/images/products/dien-thoai/oppo-reno11-f-5g.png",
-  "xiaomi-14-5g": "/images/products/dien-thoai/xiaomi-14-5g.png",
+  "iphone-15-pro-max-256gb": "/images/products/dien-thoai/dien-thoai-samsung-8gb-128gb-1.png",
+  "samsung-galaxy-s24-ultra": "/images/products/dien-thoai/dien-thoai-samsung-5g-12gb-256gb-6.png",
+  "macbook-air-15-m2": "/images/products/laptop/laptop-asus-creator-16-inch-9.png",
+  "tivi-samsung-qled-4k-65-inch-qa65q60c": "/images/products/tivi/tivi-samsung-qled-4k-43-inch-1.png",
+  "tivi-lg-4k-55-inch-55ur8050psb": "/images/products/tivi/tivi-lg-qled-4k-50-inch-2.png",
+  "tu-lanh-samsung-inverter-382-lit-rt38cg6584b1sv": "/images/products/tu-lanh/tu-lanh-samsung-inverter-260l-1.png",
+  "tu-lanh-aqua-inverter-189-lit-aqr-t219fa-pb": "/images/products/tu-lanh/tu-lanh-aqua-inverter-380l-4.png",
+  "may-lanh-daikin-inverter-1-hp-atkf25xvmv": "/images/products/dieu-hoa/dieu-hoa-daikin-inverter-1hp-1.png",
+  "may-lanh-panasonic-inverter-1-hp-cu-cs-pu9xkh-8m": "/images/products/dieu-hoa/dieu-hoa-panasonic-inverter-1-5hp-2.png",
+  "may-giat-lg-ai-dd-inverter-10-kg-fv1410s4p": "/images/products/may-giat/may-giat-lg-cua-tren-9kg-1.png",
+  "may-giat-electrolux-inverter-9-kg-ewf9024p5wb": "/images/products/may-giat/may-giat-electrolux-cua-tren-12kg-3.png",
+  "noi-com-dien-tu-sharp-18-lit-ks-com18v": "/images/products/gia-dung/gia-dung-sharp-noi-com-1-8l-1.png",
+  "lo-vi-song-sharp-20-lit": "/images/products/gia-dung/gia-dung-kangaroo-lo-vi-song-25l-10.png",
+  "oppo-reno11-f-5g": "/images/products/dien-thoai/dien-thoai-oppo-12gb-256gb-3.png",
+  "xiaomi-14-5g": "/images/products/dien-thoai/dien-thoai-xiaomi-8gb-256gb-2.png",
 };
+
+function getLocalFallbackImage(product: Product): string | undefined {
+  const normalizedSlug = (product.slug || "").toLowerCase();
+  return localImageBySlug[normalizedSlug] ?? getCategoryDefaultImage(product);
+}
 
 function getCategoryDefaultImage(product: Product): string | undefined {
   const slug = (product.slug || "").toLowerCase();
   const brand = (product.brand || "").toLowerCase();
   const category = (product.category || "").toLowerCase();
 
-  if (slug.includes("iphone") || brand.includes("apple")) return "/images/products/dien-thoai/iphone-15-pro-max-256gb.png";
-  if (slug.includes("samsung") && category.includes("dien-thoai")) return "/images/products/dien-thoai/samsung-galaxy-s24-ultra.png";
-  if (brand.includes("oppo")) return "/images/products/dien-thoai/oppo-reno11-f-5g.png";
-  if (brand.includes("xiaomi")) return "/images/products/dien-thoai/xiaomi-14-5g.png";
+  if (slug.includes("iphone") || brand.includes("apple")) return "/images/products/dien-thoai/dien-thoai-samsung-8gb-128gb-1.png";
+  if (slug.includes("samsung") && category.includes("dien-thoai")) return "/images/products/dien-thoai/dien-thoai-samsung-5g-12gb-256gb-6.png";
+  if (brand.includes("oppo")) return "/images/products/dien-thoai/dien-thoai-oppo-12gb-256gb-3.png";
+  if (brand.includes("xiaomi")) return "/images/products/dien-thoai/dien-thoai-xiaomi-8gb-256gb-2.png";
 
-  if (category.includes("laptop")) return "/images/products/laptop/macbook-air-15-m2.png";
+  if (category.includes("laptop")) return "/images/products/laptop/laptop-asus-creator-16-inch-9.png";
 
   if (category.includes("tivi")) {
-    if (brand.includes("samsung")) return "/images/products/tivi/tivi-samsung-qled-4k-65-inch-qa65q60c.png";
-    return "/images/products/tivi/tivi-lg-4k-55-inch-55ur8050psb.png";
+    if (brand.includes("samsung")) return "/images/products/tivi/tivi-samsung-qled-4k-43-inch-1.png";
+    return "/images/products/tivi/tivi-lg-qled-4k-50-inch-2.png";
   }
 
   if (category.includes("tu-lanh")) {
-    if (brand.includes("samsung")) return "/images/products/tu-lanh/tu-lanh-samsung-inverter-382-lit-rt38cg6584b1sv.png";
-    return "/images/products/tu-lanh/tu-lanh-aqua-inverter-189-lit-aqr-t219fa-pb.png";
+    if (brand.includes("samsung")) return "/images/products/tu-lanh/tu-lanh-samsung-inverter-260l-1.png";
+    return "/images/products/tu-lanh/tu-lanh-aqua-inverter-380l-4.png";
   }
 
   if (category.includes("may-giat")) {
-    if (brand.includes("electrolux")) return "/images/products/may-giat/may-giat-electrolux-inverter-9-kg-ewf9024p5wb.png";
-    return "/images/products/may-giat/may-giat-lg-ai-dd-inverter-10-kg-fv1410s4p.png";
+    if (brand.includes("electrolux")) return "/images/products/may-giat/may-giat-electrolux-cua-tren-12kg-3.png";
+    return "/images/products/may-giat/may-giat-lg-cua-tren-9kg-1.png";
   }
 
   if (category.includes("dieu-hoa")) {
-    if (brand.includes("panasonic")) return "/images/products/dieu-hoa/may-lanh-panasonic-inverter-1-hp-cu-cs-pu9xkh-8m.png";
-    return "/images/products/dieu-hoa/may-lanh-daikin-inverter-1-hp-atkf25xvmv.png";
+    if (brand.includes("panasonic")) return "/images/products/dieu-hoa/dieu-hoa-panasonic-inverter-1-5hp-2.png";
+    return "/images/products/dieu-hoa/dieu-hoa-daikin-inverter-1hp-1.png";
   }
 
   if (category.includes("gia-dung")) {
-    if (slug.includes("lo-vi-song")) return "/images/products/gia-dung/lo-vi-song-sharp-20-lit.png";
-    return "/images/products/gia-dung/noi-com-dien-tu-sharp-18-lit-ks-com18v.png";
+    if (slug.includes("lo-vi-song")) return "/images/products/gia-dung/gia-dung-kangaroo-lo-vi-song-25l-10.png";
+    return "/images/products/gia-dung/gia-dung-sharp-noi-com-1-8l-1.png";
   }
 
   return undefined;
@@ -94,18 +99,16 @@ function buildInlinePlaceholder(product: Product): string {
 }
 
 export function getSafeProductImage(product: Product, index = 0): string {
-  const normalizedSlug = (product.slug || "").toLowerCase();
-  const localExact = localImageBySlug[normalizedSlug];
-  if (localExact) {
-    return localExact;
-  }
-
-  const localByCategory = getCategoryDefaultImage(product);
-  if (localByCategory) {
-    return localByCategory;
-  }
-
   const image = product.images?.[index] || product.images?.[0];
+  if (image) {
+    return image;
+  }
+
+  const localFallback = getLocalFallbackImage(product);
+  if (localFallback) {
+    return localFallback;
+  }
+
   return image || buildInlinePlaceholder(product);
 }
 
@@ -115,7 +118,14 @@ export function handleProductImageError(
   index = 0
 ): void {
   const target = event.currentTarget;
+  const localFallback = getLocalFallbackImage(product);
   const fallback = buildInlinePlaceholder(product);
+  const currentSrc = target.getAttribute("src") || "";
+
+  if (localFallback && !currentSrc.includes(localFallback)) {
+    target.src = localFallback;
+    return;
+  }
 
   if (target.src !== fallback) {
     target.src = fallback;
