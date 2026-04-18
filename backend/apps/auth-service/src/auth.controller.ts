@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Headers, HttpCode, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, HttpCode, Patch, Param, Put, Delete } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 interface RegisterDto {
@@ -151,5 +151,27 @@ export class AuthController {
   @Post('google')
   async googleLogin(@Body('idToken') idToken: string) {
     return this.authService.googleLogin(idToken);
+  }
+
+  // ============= ADDRESS BOOK =============
+
+  @Get('addresses')
+  async listAddresses(@Headers('x-user-id') userId: string) {
+    return this.authService.listAddresses(userId);
+  }
+
+  @Post('addresses')
+  async addAddress(@Headers('x-user-id') userId: string, @Body() data: any) {
+    return this.authService.addAddress(userId, data);
+  }
+
+  @Put('addresses/:id')
+  async updateAddress(@Headers('x-user-id') userId: string, @Param('id') id: string, @Body() data: any) {
+    return this.authService.updateAddress(userId, id, data);
+  }
+
+  @Delete('addresses/:id')
+  async deleteAddress(@Headers('x-user-id') userId: string, @Param('id') id: string) {
+    return this.authService.deleteAddress(userId, id);
   }
 }

@@ -8,6 +8,57 @@ export interface AuthUser {
   email: string;
   name: string;
   role?: string;
+  points?: number;
+  addresses?: any[];
+}
+
+export interface Address {
+  id?: string;
+  fullName: string;
+  phone: string;
+  province: string;
+  district: string;
+  ward: string;
+  streetAddress: string;
+  label: string;
+  isDefault: boolean;
+}
+
+export async function listAddresses(): Promise<Address[]> {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(buildUrl('auth/addresses'), {
+    headers: authHeader
+  });
+  return response.json();
+}
+
+export async function addAddress(data: Address): Promise<Address> {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(buildUrl('auth/addresses'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeader },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+}
+
+export async function updateAddress(id: string, data: Partial<Address>): Promise<Address> {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(buildUrl(`auth/addresses/${id}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeader },
+    body: JSON.stringify(data)
+  });
+  return response.json();
+}
+
+export async function deleteAddress(id: string): Promise<any> {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(buildUrl(`auth/addresses/${id}`), {
+    method: 'DELETE',
+    headers: authHeader
+  });
+  return response.json();
 }
 
 interface LoginResponse {

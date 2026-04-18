@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 
-type PaymentMethod = 'cod' | 'vnpay' | 'momo' | 'stripe';
+type PaymentMethod = 'cod' | 'vnpay' | 'stripe';
 
 interface InitiatePaymentDto {
   orderId: string;

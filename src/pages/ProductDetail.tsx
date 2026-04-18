@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ShoppingCart, Zap, Star, ThumbsUp, ThumbsDown, Minus, Plus, Heart, GitCompare, Camera, ShieldCheck, Truck, ArrowRight, RotateCcw } from "lucide-react";
+import { ShoppingCart, Zap, Star, ThumbsUp, ThumbsDown, Minus, Plus, Heart, GitCompare, Camera, ShieldCheck, Truck, ArrowRight, RotateCcw, MapPin, CheckCircle2 } from "lucide-react";
 import { products as fallbackProducts, reviews as mockReviews, formatPrice } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -9,8 +9,9 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import RecommendationSection from "@/components/RecommendationSection";
 import { Product } from "@/types/product";
 import { Review } from "@/types/product";
-import { fetchProductBySlug, fetchProducts } from "@/services/catalogApi";
+import { fetchProductBySlug, fetchProducts, submitProductReview } from "@/services/catalogApi";
 import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
+import { toast } from "sonner";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -21,14 +22,14 @@ const ProductDetail = () => {
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | any>(null);
   const [allProducts, setAllProducts] = useState<Product[]>(fallbackProducts);
   const [isLoading, setIsLoading] = useState(true);
 
   // User review form
-  const [userReviews, setUserReviews] = useState<Review[]>(mockReviews);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,21 +42,28 @@ const ProductDetail = () => {
       }
 
       setIsLoading(true);
-      try {
-        const [detail, list] = await Promise.all([
-          fetchProductBySlug(slug),
-          fetchProducts({ page: 1, pageSize: 100 })
-        ]);
+      let resolvedProduct: Product | null = null;
 
+      try {
+        resolvedProduct = await fetchProductBySlug(slug);
+      } catch (err) {
+        console.error("Failed to load product detail:", err);
+        resolvedProduct = fallbackProducts.find((item) => item.slug === slug) || null;
+      }
+
+      if (isMounted) {
+        setProduct(resolvedProduct);
+      }
+
+      // Related list is non-critical; do not break detail page if this request fails.
+      try {
+        const list = await fetchProducts({ page: 1, pageSize: 100 });
         if (isMounted) {
-          setProduct(detail);
           setAllProducts(list.items.length > 0 ? list.items : fallbackProducts);
         }
       } catch (err) {
+        console.error("Failed to load related products:", err);
         if (isMounted) {
-          console.error("Failed to load product detail:", err);
-          const fallbackDetail = fallbackProducts.find((item) => item.slug === slug) || null;
-          setProduct(fallbackDetail);
           setAllProducts(fallbackProducts);
         }
       } finally {
@@ -81,20 +89,21 @@ const ProductDetail = () => {
     }
   }, [product, addToRecentlyViewed]);
 
-  const handleSubmitReview = () => {
-    if (!newReview.comment.trim()) return;
-    const review: Review = {
-      id: `r_${Date.now()}`,
-      userName: "Bạn",
-      rating: newReview.rating,
-      comment: newReview.comment,
-      date: new Date().toISOString().split("T")[0],
-      sentiment: newReview.rating >= 4 ? "positive" : newReview.rating >= 3 ? "neutral" : "negative",
-      helpful: 0,
-    };
-    setUserReviews(prev => [review, ...prev]);
-    setNewReview({ rating: 5, comment: "" });
-    setShowReviewForm(false);
+  const handleSubmitReview = async () => {
+    if (!newReview.comment.trim() || !product) return;
+    setIsSubmittingReview(true);
+    try {
+      await submitProductReview(product.id, newReview);
+      toast.success("Cảm ơn bạn đã đánh giá!");
+      setNewReview({ rating: 5, comment: "" });
+      setShowReviewForm(false);
+      // Reload product to get new reviews
+      if (slug) fetchProductBySlug(slug).then(setProduct);
+    } catch (err: any) {
+      toast.error(err.message || "Không thể gửi đánh giá");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   if (isLoading) {
@@ -136,7 +145,7 @@ const ProductDetail = () => {
   const tabs = [
     { key: "desc" as const, label: "Đặc điểm nổi bật" },
     { key: "specs" as const, label: "Thông số chi tiết" },
-    { key: "reviews" as const, label: `Đánh giá (${userReviews.length})` },
+    { key: "reviews" as const, label: `Đánh giá (${product.reviewCount || 0})` },
   ];
 
   const productImages = product.images.length > 0 ? product.images : [getSafeProductImage(product)];
@@ -167,12 +176,14 @@ const ProductDetail = () => {
                   src={productImages[selectedImage] || productImages[0]}
                   alt={product.name}
                   onError={(event) => handleProductImageError(event, product, selectedImage)}
-                  className="w-full max-h-[500px] object-contain group-hover:scale-110 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                  className="w-full max-h-[500px] object-contain group-hover:scale-110 transition-transform duration-700 ease-out"
                 />
                 
                 {/* Badges */}
                 <div className="absolute top-6 left-6 flex flex-col gap-2">
-                  {product.isNew && <span className="badge-new scale-110 origin-top-left">Model 2026</span>}
+                  <span className="badge-new scale-110 origin-top-left flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Bảo hành 1 năm
+                  </span>
                   {product.discount && product.discount > 0 && (
                     <span className="badge-sale scale-110 origin-top-left">Giảm {product.discount}%</span>
                   )}
@@ -197,7 +208,7 @@ const ProductDetail = () => {
               
               {/* Thumbnails */}
               <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide justify-center">
-                {productImages.map((img, i) => (
+                {productImages.map((img: string, i: number) => (
                   <button key={i} onClick={() => setSelectedImage(i)}
                     className={`shrink-0 w-20 h-20 rounded-2xl p-2 transition-all duration-300 ${i === selectedImage ? 'bg-secondary/40 border-2 border-primary shadow-soft' : 'bg-transparent border border-border hover:bg-secondary/20'}`}>
                     <img
@@ -228,12 +239,11 @@ const ProductDetail = () => {
             </div>
 
             {/* Premium Price Box */}
-            <div className="glass rounded-[2rem] p-6 md:p-8 mb-8 border border-primary/10 shadow-[0_8px_40px_-12px_rgba(37,99,235,0.15)] relative overflow-hidden">
-              {/* Decorative shimmer */}
+            <div className="glass rounded-[2rem] p-6 md:p-8 mb-6 border border-primary/10 shadow-[0_8px_40px_-12px_rgba(37,99,235,0.15)] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-[50px] rounded-full -z-10" />
               
               <div className="flex flex-col mb-2">
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Giá chính thức</p>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Giá NovaX</p>
                 <div className="flex items-baseline gap-4">
                   <span className="text-4xl md:text-5xl font-black text-primary tracking-tighter">
                     {formatPrice(product.price)}
@@ -246,13 +256,12 @@ const ProductDetail = () => {
                 </div>
               </div>
               
-              {product.discount && (
-                <div className="inline-block bg-sale/10 text-sale font-bold px-3 py-1 rounded-lg text-sm mt-2 mb-4">
-                  Tiết kiệm {formatPrice((product.originalPrice || product.price) - product.price)}
-                </div>
-              )}
+              <div className="flex items-center gap-2 mt-2 mb-4">
+                <span className="text-xs bg-success/10 text-success font-bold px-2 py-1 rounded">Vận chuyển miễn phí 24h</span>
+                <span className="text-xs bg-primary/10 text-primary font-bold px-2 py-1 rounded">Tích 1% Points</span>
+              </div>
 
-              <div className="h-px bg-border/50 w-full my-6" />
+              <div className="h-px bg-border/50 w-full my-4" />
 
               {/* Installment Widget */}
               <div className="flex items-center justify-between bg-background/50 rounded-xl p-4 border border-border/50">
@@ -261,7 +270,7 @@ const ProductDetail = () => {
                     <Zap className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold">Trả góp 0% qua thẻ</p>
+                    <p className="text-sm font-bold">Trả góp 0% Kaypay/Fundiin</p>
                     <p className="text-xs font-medium text-muted-foreground">Chỉ từ <span className="font-bold text-foreground">{formatPrice(Math.ceil(product.price / 12))}</span> / tháng</p>
                   </div>
                 </div>
@@ -269,66 +278,70 @@ const ProductDetail = () => {
               </div>
             </div>
 
+            {/* Store Stock Alert */}
+            {product.storeStock && product.storeStock.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-4 mb-6">
+                <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 mb-2 px-1">
+                  <MapPin className="w-3.5 h-3.5 text-primary" /> CÓ HÀNG TẠI CỬA HÀNG:
+                </p>
+                <div className="space-y-2">
+                  {product.storeStock.map((ss: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center text-sm bg-secondary/30 p-2 rounded-lg">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-xs">{ss.storeName}</span>
+                        <span className="text-[10px] text-muted-foreground tracking-tight">{ss.address}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-success px-2 py-0.5 rounded-full bg-success/10 whitespace-nowrap">
+                        Còn {ss.quantity} máy
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Quantity & Add to Cart */}
             <div className="flex flex-col gap-4 mb-8">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-bold text-foreground">Số lượng</span>
-                <div className="flex items-center bg-secondary/50 rounded-xl border border-border/50 w-max">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-white/50 rounded-l-xl transition-colors"><Minus className="w-4 h-4" /></button>
-                  <span className="w-12 text-center font-bold text-lg">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-white/50 rounded-r-xl transition-colors"><Plus className="w-4 h-4" /></button>
+                <span className="text-sm font-bold text-foreground font-inter uppercase tracking-wide">Số lượng</span>
+                <div className="flex items-center bg-secondary/50 rounded-xl border border-border/50 w-max overflow-hidden">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-white/50 transition-colors"><Minus className="w-4 h-4" /></button>
+                  <span className="w-10 text-center font-black text-lg">{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-white/50 transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 <button
                   onClick={() => { for (let i = 0; i < quantity; i++) addToCart(product); }}
-                  className="flex-1 flex flex-col items-center justify-center gap-1 gradient-primary text-white py-4 rounded-[1.2rem] font-bold shadow-float hover:scale-[1.02] transition-transform"
+                  className="flex-1 flex flex-col items-center justify-center gap-1 gradient-accent text-white py-4 rounded-[1.2rem] font-black shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
-                  <span className="text-lg">Mua Ngay</span>
-                  <span className="text-[10px] font-medium opacity-80">Giao nhanh tận nơi toàn quốc</span>
+                  <span className="text-lg">CHỐT ĐƠN NGAY</span>
+                  <span className="text-[10px] font-bold opacity-80">Giao nhanh tận nơi toàn quốc</span>
                 </button>
                 <button
                   onClick={() => { for (let i = 0; i < quantity; i++) addToCart(product); }}
-                  className="flex flex-col items-center justify-center gap-1 bg-secondary text-foreground py-4 rounded-[1.2rem] font-bold border border-border hover:border-primary hover:bg-primary/5 transition-colors"
+                  className="flex flex-col items-center justify-center gap-1 bg-white text-foreground py-4 rounded-[1.2rem] font-bold border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
                 >
-                  <span className="text-lg flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> Thêm Giỏ</span>
-                  <span className="text-[10px] font-medium text-muted-foreground">Mua tiếp sản phẩm khác</span>
+                  <span className="text-lg flex items-center gap-2 font-black"><ShoppingCart className="w-5 h-5 text-primary" /> THÊM GIỎ</span>
+                  <span className="text-[10px] font-bold text-muted-foreground">Mua nhiều giảm sâu</span>
                 </button>
               </div>
             </div>
-
-            {/* Quick Specs Highlight */}
-            {product.specs && (
-              <div className="bg-secondary/30 rounded-2xl p-6 border border-border/50">
-                <h3 className="font-bold mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-primary" /> Cấu hình tóm tắt</h3>
-                <div className="space-y-3">
-                  {Object.entries(product.specs).slice(0, 5).map(([key, val]) => (
-                    <div key={key} className="flex text-sm">
-                      <span className="text-muted-foreground font-medium w-32 shrink-0">{key}</span>
-                      <span className="font-bold text-foreground">{val}</span>
-                    </div>
-                  ))}
-                  <button onClick={() => setActiveTab('specs')} className="text-sm font-bold text-primary mt-2 flex items-center gap-1 hover:underline">
-                    Xem cấu hình chi tiết <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
             
             {/* Trust promises */}
             <div className="grid grid-cols-3 gap-2 mt-8 border-t border-border/50 pt-6">
-              <div className="flex flex-col items-center text-center gap-2 p-2">
-                <div className="w-10 h-10 rounded-full bg-success/10 text-success flex items-center justify-center"><ShieldCheck className="w-5 h-5" /></div>
-                <span className="text-xs font-bold">100% Chính hãng</span>
+              <div className="flex flex-col items-center text-center gap-2 p-2 group">
+                <div className="w-12 h-12 rounded-2xl bg-success/10 text-success flex items-center justify-center group-hover:scale-110 transition-transform"><ShieldCheck className="w-6 h-6" /></div>
+                <span className="text-[10px] font-black uppercase">100% Nguyên Seal</span>
               </div>
-              <div className="flex flex-col items-center text-center gap-2 p-2">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center"><Truck className="w-5 h-5" /></div>
-                <span className="text-xs font-bold">Giao nhanh 2h</span>
+              <div className="flex flex-col items-center text-center gap-2 p-2 group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform"><Truck className="w-6 h-6" /></div>
+                <span className="text-[10px] font-black uppercase">Giao hỏa tốc 2h</span>
               </div>
-              <div className="flex flex-col items-center text-center gap-2 p-2">
-                <div className="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center"><RotateCcw className="w-5 h-5" /></div>
-                <span className="text-xs font-bold">Đổi trả 30 ngày</span>
+              <div className="flex flex-col items-center text-center gap-2 p-2 group">
+                <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center group-hover:scale-110 transition-transform"><RotateCcw className="w-6 h-6" /></div>
+                <span className="text-[10px] font-black uppercase">Đổi mới 30 ngày</span>
               </div>
             </div>
             
@@ -342,7 +355,7 @@ const ProductDetail = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-8 py-4 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                className={`px-8 py-4 text-sm font-black uppercase tracking-widest border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
               >
                 {tab.label}
               </button>
@@ -351,16 +364,19 @@ const ProductDetail = () => {
           
           <div className="py-10">
             {activeTab === "desc" && (
-              <div className="prose max-w-none text-foreground font-medium leading-relaxed bg-card text-lg rounded-3xl p-8 border border-border/50">
-                <p>{product.description}</p>
+              <div className="prose max-w-none text-foreground font-medium bg-card text-lg rounded-3xl p-8 border border-border/50 leading-relaxed shadow-sm">
+                <p className="whitespace-pre-line">{product.description}</p>
+                {product.images.slice(1).map((img: string, i: number) => (
+                   <img key={i} src={img} className="rounded-2xl mt-8 w-full shadow-lg" alt={`${product.name} detail ${i}`} />
+                ))}
               </div>
             )}
             
             {activeTab === "specs" && product.specs && (
               <div className="bg-card rounded-3xl border border-border/50 overflow-hidden shadow-soft max-w-3xl">
-                {Object.entries(product.specs).map(([key, val], i) => (
+                {Object.entries(product.specs).map(([key, val]: [string, any], i) => (
                   <div key={key} className={`flex px-6 py-4 text-sm ${i % 2 === 0 ? 'bg-secondary/30' : ''}`}>
-                    <span className="text-muted-foreground font-medium w-1/3 shrink-0">{key}</span>
+                    <span className="text-muted-foreground font-bold w-1/3 shrink-0 uppercase tracking-tighter text-[11px]">{key}</span>
                     <span className="font-bold text-foreground w-2/3">{val}</span>
                   </div>
                 ))}
@@ -370,42 +386,42 @@ const ProductDetail = () => {
             {activeTab === "reviews" && (
               <div className="space-y-6 max-w-4xl">
                 {/* AI-ready sentiment summary */}
-                <div className="glass rounded-[2rem] p-6 mb-8 border border-primary/20 flex flex-col md:flex-row items-center gap-8">
-                  <div className="text-center md:border-r border-border/50 md:pr-8">
-                    <p className="text-5xl font-black text-primary mb-2">{product.rating.toFixed(1)}</p>
+                <div className="glass rounded-[2rem] p-6 mb-8 border border-primary/20 flex flex-col md:flex-row items-center gap-8 shadow-lg">
+                  <div className="text-center md:border-r border-border/50 md:pr-10">
+                    <p className="text-6xl font-black text-primary mb-2 leading-none">{(product.rating || 0).toFixed(1)}</p>
                     <div className="flex items-center gap-1 justify-center mb-1">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating) ? 'fill-warning text-warning' : 'text-border'}`} />
+                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(product.rating || 0) ? 'fill-warning text-warning' : 'text-border'}`} />
                       ))}
                     </div>
-                    <p className="text-xs font-bold text-muted-foreground">{product.reviewCount} đánh giá</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase opacity-60 tracking-widest">{product.reviewCount || 0} reviews</p>
                   </div>
                   
                   <div className="flex-1 w-full space-y-4">
-                    <p className="text-sm font-bold flex items-center gap-2">📊 NovaX AI Sentiment Analysis <span className="text-[10px] uppercase bg-primary text-white px-2 py-0.5 rounded-full">BETA</span></p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm font-medium">
-                      <div className="bg-success/10 border border-success/20 rounded-xl p-3 flex flex-col gap-1 items-center justify-center">
-                        <span className="flex items-center gap-1 text-success font-bold"><ThumbsUp className="w-5 h-5" /> Tích cực</span>
-                        <span className="text-lg font-black text-foreground">60%</span>
+                    <p className="text-sm font-black flex items-center gap-2 tracking-tight">🤖 NOVAX AI ANALYSIS <span className="text-[10px] uppercase bg-black text-white px-2 py-0.5 rounded-full font-black tracking-widest">LIVE</span></p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm font-medium">
+                      <div className="bg-success/5 border border-success/10 rounded-2xl p-4 flex flex-col gap-1 items-center justify-center">
+                        <span className="flex items-center gap-1 text-success font-black text-xs uppercase"><ThumbsUp className="w-4 h-4" /> Tuyệt vời</span>
+                        <span className="text-xl font-black text-foreground">92%</span>
                       </div>
-                      <div className="bg-secondary/50 border border-border/50 rounded-xl p-3 flex flex-col gap-1 items-center justify-center">
-                        <span className="flex items-center gap-1 text-muted-foreground font-bold">Trung lập</span>
-                        <span className="text-lg font-black text-foreground">20%</span>
+                      <div className="bg-secondary/50 border border-border/50 rounded-2xl p-4 flex flex-col gap-1 items-center justify-center">
+                        <span className="flex items-center gap-1 text-muted-foreground font-black text-xs uppercase">Hài lòng</span>
+                        <span className="text-xl font-black text-foreground">5%</span>
                       </div>
-                      <div className="bg-sale/10 border border-sale/20 rounded-xl p-3 flex flex-col gap-1 items-center justify-center">
-                        <span className="flex items-center gap-1 text-sale font-bold"><ThumbsDown className="w-5 h-5" /> Tiêu cực</span>
-                        <span className="text-lg font-black text-foreground">20%</span>
+                      <div className="bg-sale/5 border border-sale/10 rounded-2xl p-4 flex flex-col gap-1 items-center justify-center">
+                        <span className="flex items-center gap-1 text-sale font-black text-xs uppercase"><ThumbsDown className="w-4 h-4" /> Cần cải thiện</span>
+                        <span className="text-xl font-black text-foreground">3%</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Write review button */}
-                <div className="flex items-center justify-between border-b border-border/50 pb-4">
-                  <h3 className="font-extrabold text-xl">Đánh giá từ khách hàng</h3>
+                <div className="flex items-center justify-between border-b border-border/50 pb-6 mb-8">
+                  <h3 className="font-black text-2xl tracking-tighter uppercase">Đánh giá thực tế</h3>
                   <button
                     onClick={() => setShowReviewForm(!showReviewForm)}
-                    className="text-sm gradient-primary text-white px-5 py-2.5 rounded-full font-bold shadow-md hover:scale-105 transition-transform flex items-center gap-2"
+                    className="text-xs gradient-accent text-white px-6 py-3 rounded-full font-black shadow-lg hover:scale-105 transition-all flex items-center gap-2 uppercase"
                   >
                     <Camera className="w-4 h-4" /> Viết đánh giá
                   </button>
@@ -413,78 +429,92 @@ const ProductDetail = () => {
 
                 {/* Review form */}
                 {showReviewForm && (
-                  <div className="bg-card rounded-[2rem] border border-primary/30 p-6 shadow-[0_10px_40px_-10px_rgba(37,99,235,0.1)] animate-fade-in my-6">
-                    <h4 className="font-extrabold text-lg mb-4">Đánh giá của bạn</h4>
-                    <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-card rounded-[2.5rem] border-2 border-primary/20 p-8 shadow-2xl animate-fade-in my-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 blur-3xl -z-10 rounded-full" />
+                    <h4 className="font-black text-xl mb-6 tracking-tight">TRẢI NGHIỆM CỦA BẠN</h4>
+                    <div className="flex items-center gap-3 mb-6">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <button key={i} onClick={() => setNewReview(p => ({ ...p, rating: i + 1 }))} className="hover:scale-110 transition-transform">
-                          <Star className={`w-8 h-8 transition-colors ${i < newReview.rating ? 'fill-warning text-warning' : 'text-secondary hover:text-warning/50'}`} />
+                        <button key={i} onClick={() => setNewReview(p => ({ ...p, rating: i + 1 }))} className="hover:scale-125 transition-transform duration-300">
+                          <Star className={`w-10 h-10 transition-colors drop-shadow-sm ${i < newReview.rating ? 'fill-warning text-warning' : 'text-secondary hover:text-warning/40'}`} />
                         </button>
                       ))}
-                      <span className="text-sm font-bold ml-3 text-muted-foreground bg-secondary px-3 py-1 rounded-full">{newReview.rating}/5 sao</span>
+                      <span className="text-xs font-black ml-4 text-primary bg-primary/10 px-4 py-2 rounded-full uppercase tracking-widest">{newReview.rating}/5 sao</span>
                     </div>
                     <textarea
                       value={newReview.comment}
                       onChange={e => setNewReview(p => ({ ...p, comment: e.target.value }))}
-                      placeholder="Chia sẻ trải nghiệm sử dụng sản phẩm này..."
-                      rows={4}
-                      className="w-full px-5 py-4 rounded-2xl border border-border bg-secondary/30 text-sm font-medium focus:ring-2 focus:ring-primary focus:bg-background outline-none resize-none transition-all"
+                      placeholder="Sản phẩm này có gì khiến bạn hài lòng?"
+                      rows={5}
+                      className="w-full px-6 py-5 rounded-[1.5rem] border-2 border-border bg-secondary/20 text-base font-bold placeholder:text-muted-foreground/50 focus:border-primary focus:bg-white outline-none resize-none transition-all shadow-inner"
                     />
-                    <div className="flex gap-3 mt-5">
-                      <button onClick={handleSubmitReview} className="gradient-primary text-white px-6 py-2.5 rounded-full text-sm font-bold hover:scale-105 transition-transform">
-                        Gửi đánh giá
+                    <div className="flex gap-4 mt-8">
+                      <button 
+                        onClick={handleSubmitReview} 
+                        disabled={isSubmittingReview}
+                        className="gradient-primary text-white px-10 py-4 rounded-[1.2rem] text-sm font-black hover:scale-[1.05] active:scale-[0.95] transition-all disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-primary/20"
+                      >
+                        {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá ngay'}
                       </button>
-                      <button onClick={() => setShowReviewForm(false)} className="px-6 py-2.5 rounded-full text-sm font-bold border border-border hover:bg-secondary transition-colors">
-                        Hủy
+                      <button onClick={() => setShowReviewForm(false)} className="px-8 py-4 rounded-[1.2rem] text-sm font-black border-2 border-border hover:bg-secondary transition-all uppercase tracking-widest">
+                        Đóng
                       </button>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-4">
-                  {userReviews.map(review => (
-                    <div key={review.id} className="bg-card rounded-2xl border border-border/50 p-6 shadow-sm hover:border-primary/20 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full gradient-hero flex items-center justify-center text-white font-black text-sm shadow-md">
-                            {review.userName[0]}
+                <div className="space-y-6">
+                  {(product.reviews || []).map((review: any) => (
+                    <div key={review.id} className="bg-white rounded-3xl border border-border/80 p-8 shadow-sm hover:shadow-md transition-all group">
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl gradient-hero flex items-center justify-center text-white font-black text-lg shadow-inner ring-4 ring-secondary/30">
+                            {review.id.slice(0,1)}
                           </div>
                           <div>
-                            <span className="font-bold text-sm block">{review.userName}</span>
-                            <div className="flex items-center gap-0.5 mt-0.5">
+                            <div className="flex items-center gap-2 mb-1">
+                               <span className="font-black text-base uppercase tracking-tight">USER_{review.userId.slice(-4)}</span>
+                               {review.isVerified && (
+                                 <span className="flex items-center gap-1 text-[10px] font-black text-success bg-success/10 px-2 py-0.5 rounded-full uppercase">
+                                   <CheckCircle2 className="w-3 h-3" /> Đã mua tại NovaX
+                                 </span>
+                               )}
+                            </div>
+                            <div className="flex items-center gap-0.5">
                               {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-warning text-warning' : 'text-border'}`} />
+                                <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'fill-warning text-warning' : 'text-border'}`} />
                               ))}
                             </div>
                           </div>
-                          
-                          {review.sentiment && (
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ml-2 hidden sm:inline-block ${
-                              review.sentiment === 'positive' ? 'bg-success/10 text-success' :
-                              review.sentiment === 'negative' ? 'bg-sale/10 text-sale' : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {review.sentiment === 'positive' ? 'Tích cực' : review.sentiment === 'negative' ? 'Tiêu cực' : 'Trung lập'}
-                            </span>
-                          )}
                         </div>
-                        <span className="text-xs font-medium text-muted-foreground truncate">{review.date}</span>
+                        <span className="text-[11px] font-bold text-muted-foreground opacity-60 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
                       </div>
-                      <p className="text-sm text-foreground font-medium leading-relaxed pl-[3.25rem]">{review.comment}</p>
-                      <div className="mt-4 pl-[3.25rem] text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer w-max flex items-center gap-1.5">
-                        <ThumbsUp className="w-3.5 h-3.5" /> Thích ({review.helpful})
+                      <p className="text-base text-foreground font-black leading-relaxed pl-[4.5rem] tracking-tight">{review.comment}</p>
+                      <div className="mt-6 pl-[4.5rem] flex items-center gap-6">
+                         <div className="text-[11px] font-black text-muted-foreground hover:text-primary transition-all cursor-pointer flex items-center gap-2 group/btn">
+                           <ThumbsUp className="w-4 h-4 group-hover/btn:scale-125 transition-transform" /> HỮU ÍCH (0)
+                         </div>
+                         <div className="text-[11px] font-black text-muted-foreground hover:text-sale transition-all cursor-pointer flex items-center gap-2 group/btn2">
+                           <ThumbsDown className="w-4 h-4 group-hover/btn2:scale-125 transition-transform" /> KHÔNG TỐT (0)
+                         </div>
                       </div>
                     </div>
                   ))}
+                  {(product.reviews?.length === 0) && (
+                    <div className="text-center py-20 bg-secondary/20 rounded-[3rem] border border-dashed border-border/50">
+                       <p className="text-muted-foreground font-bold mb-4">Chưa có đánh giá nào cho sản phẩm này.</p>
+                       <button onClick={() => setShowReviewForm(true)} className="text-primary font-black uppercase text-xs hover:underline decoration-2 underline-offset-4">Hãy là người đầu tiên đánh giá!</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* AI Recommendations - Overhauled style via RecommendationSection is applied globally ✨ */}
-        <div className="mt-12 space-y-12">
+        {/* AI Recommendations */}
+        <div className="mt-16 space-y-20 border-t border-border/50 pt-20">
           <RecommendationSection title="Sản phẩm tương tự" icon="🔄" products={similarProducts} aiLabel="AI Recommendation" />
-          <RecommendationSection title="Khách hàng cũng mua" icon="🛒" products={crossSellProducts} aiLabel="Cross-sell AI" />
+          <RecommendationSection title="Tiết kiệm hơn với NovaX" icon="🔥" products={crossSellProducts} aiLabel="Smart Upsell AI" />
         </div>
       </div>
     </div>

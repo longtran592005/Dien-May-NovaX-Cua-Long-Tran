@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { categories } from "@/data/mockData";
-import { MapPin, Phone, Mail, Shield, RotateCcw, Truck, FileText, Facebook, Youtube, Zap } from "lucide-react";
+import { MapPin, Phone, Mail, Shield, RotateCcw, Truck, FileText, Facebook, Youtube } from "lucide-react";
 
 const Footer = () => (
   <footer className="bg-[#0A0D14] text-white/70 mt-20 pt-16 relative overflow-hidden">
@@ -11,9 +11,6 @@ const Footer = () => (
       <div className="grid grid-cols-2 md:grid-cols-6 gap-10 md:gap-8 mb-12">
         <div className="col-span-2 md:col-span-2">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]">
-              <Zap className="w-5 h-5 fill-current" />
-            </div>
             <h3 className="font-black text-2xl text-white tracking-tight">NovaX</h3>
           </div>
           <p className="text-sm leading-relaxed mb-6 max-w-xs font-medium">

@@ -9,7 +9,7 @@ async function bootstrap() {
     credentials: true
   });
   app.setGlobalPrefix('api/v1');
-  const port = Number(process.env.PORT || '8080');
+  const port = Number(process.env.PORT || '3000');
   await app.listen(port);
   console.log('api-gateway listening on port ' + port);
 }

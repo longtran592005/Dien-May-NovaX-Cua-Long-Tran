@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { formatPrice } from '@/data/mockData';
-import { createAdminProduct, deleteAdminProduct, listAdminProducts, updateAdminProduct } from '@/services/adminApi';
+import { formatPrice, categories } from '@/data/mockData';
+import {
+  createAdminProduct,
+  deleteAdminProduct,
+  listAdminProducts,
+  updateAdminProduct,
+  uploadAdminProductImage
+} from '@/services/adminApi';
 import type { Product } from '@/types/product';
 
 type ProductFormState = {
@@ -16,6 +22,29 @@ type ProductFormState = {
   categorySlug: string;
   images: string;
 };
+
+const BRANDS = [
+  'Apple',
+  'Samsung',
+  'LG',
+  'Sony',
+  'Daikin',
+  'Panasonic',
+  'Sharp',
+  'Aqua',
+  'Dell',
+  'HP',
+  'Lenovo',
+  'ASUS',
+  'Xiaomi',
+  'OPPO',
+  'vivo',
+  'Toshiba',
+  'Hatari',
+  'Midea',
+  'Sunhouse',
+  'Kangaroo'
+].sort();
 
 const emptyForm: ProductFormState = {
   name: '',
@@ -194,20 +223,29 @@ export default function ProductsPage() {
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium">Thương hiệu</span>
-              <input
+              <select
                 value={form.brand}
                 onChange={(e) => updateField('brand', e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
+              >
+                {BRANDS.map(brand => (
+                  <option key={brand} value={brand}>{brand}</option>
+                ))}
+                <option value="Khác">Khác</option>
+              </select>
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium">Danh mục</span>
-              <input
+              <select
                 value={form.categorySlug}
                 onChange={(e) => updateField('categorySlug', e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
+              >
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                ))}
+              </select>
             </label>
 
             <label className="block">
@@ -270,7 +308,35 @@ export default function ProductsPage() {
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">Ảnh (mỗi dòng một URL)</span>
+              <span className="mb-1 block text-sm font-medium">Ảnh sản phẩm</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={saving}
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || files.length === 0) return;
+                  try {
+                    setSaving(true);
+                    let urlList = form.images ? form.images + '\n' : '';
+                    for (let i = 0; i < files.length; i++) {
+                      const res = await uploadAdminProductImage(files[i], form.categorySlug);
+                      urlList += res.url + '\n';
+                    }
+                    setForm((prev) => ({ ...prev, images: urlList }));
+                    toast.success('Đã tải ảnh lên Server thành công');
+                  } catch (error) {
+                    toast.error('Lỗi upload ảnh');
+                  } finally {
+                    setSaving(false);
+                    // Reset input
+                    e.target.value = '';
+                  }
+                }}
+                className="w-full mb-2"
+              />
+              <span className="mb-1 block text-xs text-muted-foreground">List URL sau khi upload (bạn có thể chỉnh sửa thủ công)</span>
               <textarea
                 value={form.images}
                 onChange={(e) => setForm((prev) => ({ ...prev, images: e.target.value }))}

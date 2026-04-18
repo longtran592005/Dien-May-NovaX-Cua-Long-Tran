@@ -3,37 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-enum UserRole {
-  customer
-  admin
-}
-
-enum OrderStatus {
-  pending
-  confirmed
-  processing
-  shipped
-  delivered
-  cancelled
-}
-
-enum PaymentMethod {
-  cod
-  vnpay
-  momo
-}
-
-enum PaymentStatus {
-  pending
-  processing
-  completed
-  failed
-  refunded
-}
+// UserRole ENUM mapped to String: "customer", "admin"
+// OrderStatus ENUM mapped to String: "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"
+// PaymentMethod ENUM mapped to String: "cod", "vnpay", "momo"
+// PaymentStatus ENUM mapped to String: "pending", "processing", "completed", "failed", "refunded"
 
 model User {
   id                 String    @id @default(uuid())
@@ -42,16 +19,17 @@ model User {
   fullName           String?
   passwordHash       String?
   googleId           String?   @unique
-  role               UserRole  @default(customer)
+  role               String    @default("customer")
   verified           Boolean   @default(false)
   confirmationCode   String?
-  otpCode            String?
-  otpExpiry          DateTime?
+  points             Int       @default(0)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   carts              Cart[]
   orders             Order[]
   addresses          Address[]
+  reviews            ProductReview[]
+  savedCards         SavedCard[]
   refreshTokens      RefreshToken[]
 }
 
@@ -96,6 +74,9 @@ model Product {
   category      Category   @relation(fields: [categoryId], references: [id])
   images        ProductImage[]
   orderItems    OrderItem[]
+  reviews       ProductReview[]
+  stocks        StoreStock[]
+  warranties    Warranty[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -138,6 +119,7 @@ model Address {
   district      String
   ward          String
   streetAddress String
+  label         String   @default("Home") // House, Office, etc.
   isDefault     Boolean  @default(false)
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders        Order[]
@@ -146,29 +128,32 @@ model Address {
 }
 
 model Order {
-  id               String        @id @default(uuid())
-  orderNumber      String        @unique
-  userId           String
-  status           OrderStatus   @default(pending)
-  subtotal         Int
-  shippingFee      Int           @default(0)
-  discountAmount   Int           @default(0)
-  total            Int
+  id                String        @id @default(uuid())
+  orderNumber       String        @unique
+  userId            String
+  status            String        @default("pending")
+  subtotal          Int
+  shippingFee       Int           @default(0)
+  discountAmount    Int           @default(0)
+  usedPoints        Int           @default(0)
+  total             Int
   shippingAddressId String
-  note             String?
-  user             User          @relation(fields: [userId], references: [id])
-  shippingAddress  Address       @relation(fields: [shippingAddressId], references: [id])
-  items            OrderItem[]
-  payment          Payment?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  deliveryMethod    String        @default("standard") // standard, express_2h, pickup
+  note              String?
+  user              User          @relation(fields: [userId], references: [id])
+  shippingAddress   Address       @relation(fields: [shippingAddressId], references: [id])
+  items             OrderItem[]
+  payment           Payment?
+  warranties        Warranty[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 }
 
 model OrderItem {
   id         String   @id @default(uuid())
   orderId    String
   productId  String
-  quantity   Int
+  quantity  Int
   unitPrice  Int
   order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product    Product  @relation(fields: [productId], references: [id])
@@ -176,12 +161,72 @@ model OrderItem {
 
 model Payment {
   id            String        @id @default(uuid())
-  orderId        String        @unique
-  amount         Int
-  method         PaymentMethod
-  status         PaymentStatus @default(pending)
+  orderId       String        @unique
+  amount        Int
+  method        String
+  status        String        @default("pending")
   transactionRef String?
-  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  // Removed order relation to allow payment creation without order existing
+  // In production, consider adding order validation at service layer
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model ProductReview {
+  id          String   @id @default(uuid())
+  userId      String
+  productId   String
+  rating      Int
+  comment     String?
+  isVerified  Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model Store {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  province  String
+  district  String
+  phone     String?
+  stocks    StoreStock[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoreStock {
+  id        String   @id @default(uuid())
+  productId String
+  storeId   String
+  quantity  Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model SavedCard {
+  id        String   @id @default(uuid())
+  userId    String
+  brand     String
+  last4     String
+  token     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Warranty {
+  id           String   @id @default(uuid())
+  orderId      String
+  productId    String
+  expiryDate   DateTime
+  serialNumber String   @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
+  createdAt    DateTime @default(now())
 }

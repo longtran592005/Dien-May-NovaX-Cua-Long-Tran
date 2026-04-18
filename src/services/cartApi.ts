@@ -15,9 +15,10 @@ export interface RemoteCartResponse {
 }
 
 export async function fetchRemoteCart(): Promise<RemoteCartResponse> {
-  const url = new URL('cart', `${API_BASE_URL.replace(/\/$/, '')}/`);
+  const baseUrl = API_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/cart`;
   const authHeader = await getAuthHeader();
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     headers: authHeader
   });
   if (!response.ok) {
@@ -27,9 +28,10 @@ export async function fetchRemoteCart(): Promise<RemoteCartResponse> {
 }
 
 export async function upsertRemoteCart(items: RemoteCartItem[]): Promise<RemoteCartResponse> {
-  const url = new URL('cart', `${API_BASE_URL.replace(/\/$/, '')}/`);
+  const baseUrl = API_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/cart`;
   const authHeader = await getAuthHeader();
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

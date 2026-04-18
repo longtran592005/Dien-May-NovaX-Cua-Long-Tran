@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-export type PaymentMethod = 'cod' | 'vnpay' | 'momo' | 'stripe';
+export type PaymentMethod = 'cod' | 'vnpay' | 'stripe';
 
 export interface InitiatePaymentRequest {
   orderId: string;
@@ -20,9 +20,10 @@ export interface InitiatePaymentResponse {
 }
 
 export async function initiatePayment(payload: InitiatePaymentRequest): Promise<InitiatePaymentResponse> {
-  const url = new URL('payments/initiate', `${API_BASE_URL.replace(/\/$/, '')}/`);
+  const baseUrl = API_BASE_URL.replace(/\/$/, '');
+  const url = `${baseUrl}/payments/initiate`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

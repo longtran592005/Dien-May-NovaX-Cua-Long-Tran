@@ -40,7 +40,7 @@ const policies = [
     title: "Điều khoản sử dụng",
     sections: [
       { title: "Quyền và nghĩa vụ", content: "Người dùng cam kết cung cấp thông tin chính xác khi đặt hàng. NovaX cam kết bảo mật thông tin cá nhân theo quy định pháp luật. Giá và thông tin sản phẩm có thể thay đổi mà không báo trước." },
-      { title: "Thanh toán", content: "Chấp nhận thanh toán: Tiền mặt (COD), chuyển khoản, thẻ tín dụng/ghi nợ, ví điện tử (MoMo, VNPay, ZaloPay). Hóa đơn VAT được xuất theo yêu cầu." },
+      { title: "Thanh toán", content: "Chấp nhận thanh toán: Tiền mặt (COD), chuyển khoản, thẻ tín dụng/ghi nợ, ví điện tử (VNPay, ZaloPay). Hóa đơn VAT được xuất theo yêu cầu." },
       { title: "Quy định chung", content: "NovaX có quyền từ chối phục vụ các đơn hàng có dấu hiệu gian lận. Chương trình khuyến mãi không áp dụng đồng thời. Mọi tranh chấp được giải quyết theo pháp luật Việt Nam." },
     ],
   },

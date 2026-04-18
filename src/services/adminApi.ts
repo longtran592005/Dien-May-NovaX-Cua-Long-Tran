@@ -27,7 +27,7 @@ export interface AdminOrder {
   orderNumber: string;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
-  paymentMethod: 'cod' | 'vnpay' | 'momo' | 'stripe';
+  paymentMethod: 'cod' | 'vnpay' | 'stripe';
   userId: string;
   shippingAddressId: string;
   note?: string | null;
@@ -128,6 +128,32 @@ export async function updateAdminProduct(id: string, payload: Partial<AdminProdu
     method: 'PUT',
     body: JSON.stringify(payload)
   });
+}
+
+export async function uploadAdminProductImage(file: File, category?: string): Promise<{ url: string }> {
+  const headers = await getAuthHeader();
+  const targetUrl = buildUrl('/admin/products/upload');
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  if (category?.trim()) {
+    formData.append('category', category.trim());
+  }
+
+  const response = await fetch(targetUrl, {
+    method: 'POST',
+    headers: {
+      ...headers,
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message || 'Upload failed');
+  }
+
+  return response.json() as Promise<{ url: string }>;
 }
 
 export async function deleteAdminProduct(id: string) {

@@ -5,7 +5,7 @@ import { formatPrice } from "@/data/mockData";
 import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const CartPage = () => {
-  const { items, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
+  const { items, removeFromCart, updateQuantity, clearCart, totalPrice, totalItems } = useCart();
   const navigate = useNavigate();
 
   const handleCheckout = () => {

@@ -68,7 +68,14 @@ const App = () => (
                           <Route path="/register" element={<RegisterPage />} />
                           <Route path="/verify-email" element={<VerifyEmailPage />} />
                           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                          <Route path="/order-tracking" element={<OrderTrackingPage />} />
+                          <Route
+                            path="/order-tracking"
+                            element={
+                              <ProtectedRoute>
+                                <OrderTrackingPage />
+                              </ProtectedRoute>
+                            }
+                          />
                           <Route path="/comparison" element={<ComparisonPage />} />
                           <Route path="/blog" element={<BlogPage />} />
                           <Route path="/stores" element={<StoreLocatorPage />} />

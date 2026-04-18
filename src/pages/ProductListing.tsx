@@ -47,8 +47,8 @@ const ProductListing = () => {
       } catch (err) {
         if (isMounted) {
           console.error("Failed to load products:", err);
-          setApiError("Không kết nối được API.");
-          setApiProducts([]);
+          setApiError("Không kết nối được API. Đang hiển thị dữ liệu mẫu.");
+          setApiProducts(fallbackProducts);
         }
       } finally {
         if (isMounted) {

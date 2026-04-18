@@ -137,26 +137,105 @@ export class CatalogService {
         return fallbackProducts.find((fallbackItem) => fallbackItem.slug === slug) || null;
       }
 
-      const typedItem = item as unknown as CatalogDbProduct;
+      // Keep detail endpoint resilient even when optional relation tables are not available.
+      let storeStock: Array<{ storeName: string; address: string; quantity: number }> = [];
+      let reviews: Array<unknown> = [];
+
+      try {
+        const [dbStoreStock, dbReviews] = await Promise.all([
+          this.prisma.storeStock.findMany({
+            where: { productId: item.id },
+            include: { store: true }
+          }),
+          this.prisma.productReview.findMany({
+            where: { productId: item.id },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+          })
+        ]);
+
+        storeStock = dbStoreStock.map((stockItem) => ({
+          storeName: stockItem.store.name,
+          address: stockItem.store.address,
+          quantity: stockItem.quantity
+        }));
+        reviews = dbReviews;
+      } catch {
+        // Return base product details even if relation queries fail.
+      }
 
       return {
-        id: typedItem.id,
-        name: typedItem.name,
-        slug: typedItem.slug,
-        price: typedItem.price,
-        originalPrice: typedItem.originalPrice || undefined,
-        discount: typedItem.discount || undefined,
-        images: typedItem.images.length > 0 ? typedItem.images.map((image) => image.url) : [],
-        category: typedItem.category.slug,
-        brand: typedItem.brand,
-        rating: typedItem.rating,
-        reviewCount: typedItem.reviewCount,
-        description: typedItem.description || undefined,
-        inStock: typedItem.inStock
+        ...item,
+        images: item.images.map(img => img.url),
+        category: item.category.slug,
+        storeStock,
+        reviews
       };
     } catch {
       return fallbackProducts.find((item) => item.slug === slug) || null;
     }
+  }
+
+  async addReview(userId: string, productId: string, data: any) {
+    // Check if verified buyer
+    const orders = await this.prisma.order.findMany({
+      where: {
+        userId,
+        status: 'delivered',
+        items: { some: { productId } }
+      }
+    });
+
+    const isVerified = orders.length > 0;
+
+    const review = await this.prisma.productReview.upsert({
+      where: {
+        userId_productId: {
+          userId,
+          productId
+        }
+      },
+      update: {
+        rating: data.rating,
+        comment: data.comment,
+        isVerified
+      },
+      create: {
+        productId,
+        userId,
+        rating: data.rating,
+        comment: data.comment,
+        isVerified
+      }
+    });
+
+    // Update product rating average
+    const reviews = await this.prisma.productReview.findMany({
+      where: { productId }
+    });
+
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        rating: avgRating,
+        reviewCount: reviews.length
+      }
+    });
+
+    return review;
+  }
+
+  async listStores() {
+    return this.prisma.store.findMany();
+  }
+
+  async getStoreStock(productId: string) {
+    return this.prisma.storeStock.findMany({
+      where: { productId },
+      include: { store: true }
+    });
   }
 
   async createProduct(input: UpsertProductInput) {

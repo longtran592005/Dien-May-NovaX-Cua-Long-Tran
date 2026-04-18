@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+/* Phông chữ Inter hỗ trợ Tiếng Việt cực kì tốt, hiển thị rõ ràng sắc nét */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -101,8 +102,21 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
-    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    line-height: inherit;
+    /* Tailwind handles this well with Inter */
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Khôi phục heading font theo Inter để không bị lỗi gradient */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
   }
 }
 
@@ -157,7 +171,35 @@
 
   .section-title {
     @apply text-2xl md:text-3xl font-extrabold text-foreground flex items-center gap-2;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
+  }
+
+  /* Giá sản phẩm */
+  .product-price {
+    font-weight: 700;
+  }
+
+  /* Tên sản phẩm */
+  .product-name {
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* Navigation menu */
+  .nav-menu {
+    font-weight: 600;
+  }
+
+  /* Footer */
+  .footer-text {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  /* Nội dung mô tả dài */
+  .content-body {
+    font-size: 15px;
+    line-height: 1.7;
   }
 }
 

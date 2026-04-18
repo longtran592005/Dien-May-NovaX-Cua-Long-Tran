@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Zap, Flame, Clock, Trash2, ArrowRight, ChevronRight } from "lucide-react";
-import { categories, formatPrice } from "@/data/mockData";
+import { Clock, Trash2, ArrowRight, ChevronRight, Truck, RefreshCcw, ShieldCheck, CreditCard, Flame } from "lucide-react";
+import { categories, formatPrice, products as mockProducts } from "@/data/mockData";
 import ProductCard from "@/components/ProductCard";
 import RecommendationSection from "@/components/RecommendationSection";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
@@ -31,8 +31,8 @@ const FlashSaleTimer = () => {
     <div className="flex gap-1 items-center">
       {[pad(time.hours), pad(time.minutes), pad(time.seconds)].map((v, i) => (
         <span key={i} className="flex items-center">
-          <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-sm px-2.5 py-1 rounded shadow-[0_2px_10px_rgba(0,0,0,0.1)]">{v}</span>
-          {i < 2 && <span className="text-white font-bold mx-0.5">:</span>}
+          <span className="bg-white/20 backdrop-blur-md border border-white/30 text-black font-bold text-sm px-2.5 py-1 rounded shadow-[0_2px_10px_rgba(0,0,0,0.1)]">{v}</span>
+          {i < 2 && <span className="text-black font-bold mx-0.5">:</span>}
         </span>
       ))}
     </div>
@@ -46,7 +46,10 @@ const Homepage = () => {
   useEffect(() => {
     void fetchProducts({ page: 1, pageSize: 200 })
       .then(res => setProducts(res.items))
-      .catch(console.error);
+      .catch(() => {
+        // Fallback to mock data when API is not available
+        setProducts(mockProducts);
+      });
   }, []);
 
   const flashSaleProducts = products.filter(p => p.discount && p.discount >= 20);
@@ -57,17 +60,17 @@ const Homepage = () => {
   return (
     <div className="animate-fade-up">
       <div className="container mx-auto px-4 py-6">
-        
+
         {/* PREMIUM BENTO GRID HERO */}
         <section className="mb-10">
           <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 h-auto md:h-[500px]">
-            
+
             {/* Box 1: Main featured (Span 2x2) */}
             <div className="md:col-span-2 md:row-span-2 rounded-[2rem] overflow-hidden relative group shadow-card">
-              <img 
-                src={heroBanner} 
-                alt="Khuyen mai chinh" 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+              <img
+                src={heroBanner}
+                alt="Khuyen mai chinh"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 z-10">
@@ -92,18 +95,11 @@ const Homepage = () => {
                 <h2 className="text-white text-2xl md:text-3xl font-bold mb-2">Galaxy S24 Ultra</h2>
                 <p className="text-white/70 font-medium">Quyền năng AI trong tay bạn.</p>
               </div>
-              {/* Simulated floating device illustration via text since we lack image */}
-              <div className="absolute right-6 -bottom-6 text-9xl animate-float opacity-30 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)]">
-                📱
-              </div>
             </div>
 
             {/* Box 3: Span 1x1 Bottom Right 1 */}
             <div className="md:col-span-1 md:row-span-1 rounded-[2rem] bg-secondary p-6 relative group overflow-hidden shadow-card flex flex-col justify-between">
               <div>
-                <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
-                  <Zap className="w-5 h-5" />
-                </div>
                 <h3 className="font-bold text-lg mb-1">Giao Tốc Hành</h3>
                 <p className="text-sm text-muted-foreground font-medium">Nhận hàng trong 2h tại nội thành</p>
               </div>
@@ -129,13 +125,13 @@ const Homepage = () => {
         <section className="mb-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: "🚚", title: "Miễn phí giao hàng", desc: "Cho đơn từ 500K" },
-              { icon: "🔄", title: "Đổi trả 30 ngày", desc: "Hoàn tiền 100%" },
-              { icon: "🛡️", title: "Bảo hành chính hãng", desc: "Từ 12 đến 24 tháng" },
-              { icon: "💳", title: "Trả góp 0%", desc: "Qua thẻ tín dụng" },
+              { icon: <Truck className="w-6 h-6 text-primary" />, title: "Miễn phí giao hàng", desc: "Cho đơn từ 500K" },
+              { icon: <RefreshCcw className="w-6 h-6 text-primary" />, title: "Đổi trả 30 ngày", desc: "Hoàn tiền 100%" },
+              { icon: <ShieldCheck className="w-6 h-6 text-primary" />, title: "Bảo hành chính hãng", desc: "Từ 12 đến 24 tháng" },
+              { icon: <CreditCard className="w-6 h-6 text-primary" />, title: "Trả góp 0%", desc: "Qua thẻ tín dụng" },
             ].map((badge, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 md:p-5 bg-card/60 backdrop-blur-md rounded-2xl border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-soft">
-                <span className="text-3xl bg-secondary w-12 h-12 flex flex-shrink-0 items-center justify-center rounded-xl">{badge.icon}</span>
+              <div key={i} className="flex items-center gap-4 p-4 md:p-5 bg-card/60 backdrop-blur-md rounded-xl border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-soft">
+                <div className="flex flex-shrink-0 items-center justify-center bg-secondary w-12 h-12 rounded-full">{badge.icon}</div>
                 <div>
                   <p className="text-sm font-extrabold">{badge.title}</p>
                   <p className="text-xs text-muted-foreground font-medium mt-0.5">{badge.desc}</p>
@@ -187,9 +183,9 @@ const Homepage = () => {
         {/* Mid parallax banner */}
         <section className="mb-12">
           <Link to="/products" className="block rounded-[2rem] overflow-hidden relative h-[150px] md:h-[250px] group shadow-card">
-             {/* Using fixed background attachment for parallax effect (if supported) */}
-            <div 
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105" 
+            {/* Using fixed background attachment for parallax effect (if supported) */}
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
               style={{ backgroundImage: `url(${banner2})`, backgroundAttachment: 'fixed', backgroundPosition: 'center' }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />

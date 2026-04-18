@@ -2,7 +2,7 @@ import { Body, Controller, Headers, Param, Patch, Get, Post } from '@nestjs/comm
 
 interface CreateOrderBody {
   shippingAddressId: string;
-  paymentMethod: 'cod' | 'vnpay' | 'momo';
+  paymentMethod: 'cod' | 'vnpay' | 'stripe';
   note?: string;
   items?: Array<{ productId: string; quantity: number }>;
   total?: number;
@@ -15,7 +15,7 @@ interface OrderRecord {
   total: number;
   items: Array<{ productId: string; quantity: number }>;
   userId: string;
-  paymentMethod: 'cod' | 'vnpay' | 'momo';
+  paymentMethod: 'cod' | 'vnpay' | 'stripe';
   shippingAddressId: string;
   note: string | null;
   createdAt: string;
@@ -62,8 +62,12 @@ export class OrderController {
   }
 
   @Get()
-  listOrders() {
-    return this.orders;
+  listOrders(@Headers('x-user-id') userId?: string) {
+    if (!userId || userId === 'guest') {
+      return this.orders;
+    }
+
+    return this.orders.filter((order) => order.userId === userId);
   }
 
   @Get(':id')

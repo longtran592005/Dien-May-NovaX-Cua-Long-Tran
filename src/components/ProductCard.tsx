@@ -25,7 +25,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           src={getSafeProductImage(product)}
           alt={product.name}
           onError={(event) => handleProductImageError(event, product)}
-          className="w-full aspect-square object-cover group-hover:scale-110 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+          className="w-full aspect-square object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
           loading="lazy"
         />
         
@@ -56,21 +56,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
         </div>
       </Link>
       
-      <div className="px-3 py-4 flex-1 flex flex-col">
+      <div className="px-3 py-3 flex-1 flex flex-col">
         <Link to={`/product/${product.slug}`}>
-          <h3 className="text-[15px] font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[2.5rem] leading-snug">
+          <h3 className="text-sm font-normal text-foreground line-clamp-2 group-hover:text-primary transition-colors min-h-[2.5rem] leading-[20px]">
             {product.name}
           </h3>
         </Link>
-        <div className="flex items-center gap-1.5 mt-2">
-          <Star className="w-4 h-4 fill-warning text-warning" />
+        <div className="flex items-center gap-1 mt-1.5">
+          <Star className="w-3.5 h-3.5 fill-warning text-warning" />
           <span className="text-xs font-bold text-foreground">{product.rating}</span>
-          <span className="text-xs text-muted-foreground font-medium">({product.reviewCount})</span>
+          <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
         </div>
-        <div className="mt-3 mb-3 flex-1 flex items-baseline gap-2">
-          <p className="text-lg font-extrabold text-sale tracking-tight">{formatPrice(product.price)}</p>
+        <div className="mt-2 mb-2 flex-1 flex flex-col gap-0.5">
+          <p className="text-[16px] font-bold text-sale leading-tight">{formatPrice(product.price)}</p>
           {product.originalPrice && (
-            <p className="text-xs font-medium text-muted-foreground line-through">{formatPrice(product.originalPrice)}</p>
+            <p className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice)}</p>
           )}
         </div>
         

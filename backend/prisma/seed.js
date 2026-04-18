@@ -121,14 +121,11 @@ function buildCatalogProducts() {
 
 const products = buildCatalogProducts();
 
-async function ensureUserSchemaCompatibility() {
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "googleId" TEXT');
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verified" BOOLEAN DEFAULT false');
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "confirmationCode" TEXT');
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "otpCode" TEXT');
-    await prisma.$executeRawUnsafe('ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "otpExpiry" TIMESTAMP(3)');
-    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId")');
-}
+const stores = [
+    { name: 'NovaX Q1 - Hồ Chí Minh', address: '123 Lê Lợi, P. Bến Thành, Quận 1', province: 'hcm', district: 'q1', phone: '028 1234 5678' },
+    { name: 'NovaX Thủ Đức', address: '45 Võ Văn Ngân, P. Linh Chiểu, Thủ Đức', province: 'hcm', district: 'td', phone: '028 2234 5678' },
+    { name: 'NovaX Cầu Giấy - Hà Nội', address: '89 Xuân Thủy, Dịch Vọng, Cầu Giấy', province: 'hn', district: 'cg', phone: '024 3234 5678' }
+];
 
 async function seedCategories() {
     for (const category of categories) {
@@ -140,8 +137,22 @@ async function seedCategories() {
     }
 }
 
+async function seedStores() {
+    for (const store of stores) {
+        await prisma.store.upsert({
+            where: { id: `store_${store.district}` }, // Using district as a pseudo-id for seed stability
+            create: {
+                id: `store_${store.district}`,
+                ...store
+            },
+            update: store
+        });
+    }
+}
+
 async function seedProducts() {
     const seededSlugs = [];
+    const dbStores = await prisma.store.findMany();
 
     for (const item of products) {
         const category = await prisma.category.findUnique({
@@ -181,48 +192,22 @@ async function seedProducts() {
             }
         });
 
-        await prisma.productImage.deleteMany({
-            where: { productId: product.id }
+        // Clear and add images
+        await prisma.productImage.deleteMany({ where: { productId: product.id } });
+        await prisma.productImage.create({
+            data: { productId: product.id, url: item.image, sortOrder: 0 }
         });
 
-        await prisma.productImage.create({
-            data: {
-                productId: product.id,
-                url: item.image,
-                sortOrder: 0
-            }
-        });
+        // Seed stock for stores
+        for (const store of dbStores) {
+            await prisma.storeStock.upsert({
+                where: { productId_storeId: { productId: product.id, storeId: store.id } },
+                create: { productId: product.id, storeId: store.id, quantity: Math.floor(Math.random() * 10) + 1 },
+                update: {}
+            });
+        }
 
         seededSlugs.push(item.slug);
-    }
-
-    const oldProducts = await prisma.product.findMany({
-        where: {
-            slug: { notIn: seededSlugs }
-        },
-        include: {
-            _count: { select: { orderItems: true } }
-        }
-    });
-
-    const deletableIds = oldProducts
-        .filter((p) => p._count.orderItems === 0)
-        .map((p) => p.id);
-
-    if (deletableIds.length > 0) {
-        await prisma.productImage.deleteMany({ where: { productId: { in: deletableIds } } });
-        await prisma.product.deleteMany({ where: { id: { in: deletableIds } } });
-    }
-
-    const keepButHideIds = oldProducts
-        .filter((p) => p._count.orderItems > 0)
-        .map((p) => p.id);
-
-    if (keepButHideIds.length > 0) {
-        await prisma.product.updateMany({
-            where: { id: { in: keepButHideIds } },
-            data: { isActive: false, inStock: false, stock: 0 }
-        });
     }
 }
 
@@ -230,7 +215,7 @@ async function seedUsers() {
     const adminPasswordHash = await bcrypt.hash('123456', 10);
     const customerPasswordHash = await bcrypt.hash('123456', 10);
 
-    await prisma.user.upsert({
+    const admin = await prisma.user.upsert({
         where: { email: 'admin@novax.vn' },
         create: {
             email: 'admin@novax.vn',
@@ -238,45 +223,61 @@ async function seedUsers() {
             passwordHash: adminPasswordHash,
             role: 'admin',
             verified: true,
-            carts: {
-                create: {}
-            }
+            carts: { create: {} }
         },
-        update: {
-            fullName: 'NovaX Admin',
-            passwordHash: adminPasswordHash,
-            role: 'admin',
-            verified: true
-        }
+        update: { fullName: 'NovaX Admin', role: 'admin', verified: true }
     });
 
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
         where: { email: 'user@email.com' },
         create: {
             email: 'user@email.com',
-            fullName: 'Khach hang',
+            fullName: 'Khach Hang Demo',
             passwordHash: customerPasswordHash,
             role: 'customer',
             verified: true,
-            carts: {
-                create: {}
-            }
+            points: 500, // Pre-seed some points for testing
+            carts: { create: {} }
         },
-        update: {
-            fullName: 'Khach hang',
-            passwordHash: customerPasswordHash,
-            role: 'customer',
-            verified: true
-        }
+        update: { fullName: 'Khach Hang Demo', role: 'customer', verified: true }
+    });
+
+    // Seed addresses for the user
+    await prisma.address.deleteMany({ where: { userId: user.id } });
+    await prisma.address.createMany({
+        data: [
+            {
+                userId: user.id,
+                fullName: 'Khách Hàng Demo',
+                phone: '0901234567',
+                province: 'hcm',
+                district: 'q1',
+                ward: 'p_ben_thanh',
+                streetAddress: '123 Lê Lợi',
+                label: 'Nhà riêng',
+                isDefault: true
+            },
+            {
+                userId: user.id,
+                fullName: 'Khách Hàng Demo',
+                phone: '0901234567',
+                province: 'hn',
+                district: 'cg',
+                ward: 'p_dich_vong',
+                streetAddress: '89 Xuân Thủy',
+                label: 'Cơ quan',
+                isDefault: false
+            }
+        ]
     });
 }
 
 async function main() {
-    await ensureUserSchemaCompatibility();
     await seedCategories();
+    await seedStores();
     await seedUsers();
     await seedProducts();
-    console.log(`Seed completed: ${products.length} products (${Object.keys(catalogBlueprint).length} categories x 10 models)`);
+    console.log(`Seed completed successfully`);
 }
 
 main()

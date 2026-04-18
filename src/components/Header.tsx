@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, Menu, X, ChevronDown, Heart, GitCompare, Zap } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, X, ChevronDown, GitCompare } from "lucide-react";
 import { categories, products } from "@/data/mockData";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -46,9 +47,6 @@ const Header = () => {
       {/* Top bar */}
       <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <Link to="/" className="text-primary font-black text-2xl md:text-3xl tracking-tighter flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center text-white group-hover:rotate-12 transition-transform">
-            <Zap className="w-5 h-5 fill-current" />
-          </div>
           <span className="text-gradient from-primary to-accent">NovaX</span>
         </Link>
 
@@ -81,7 +79,12 @@ const Header = () => {
                         className="flex items-center gap-4 px-4 py-3 hover:bg-secondary transition-colors"
                         onClick={() => { setSearchQuery(""); setSearchFocused(false); }}
                       >
-                        <img src={p.images[0]} alt="" className="w-12 h-12 rounded-xl object-cover bg-white" />
+                        <img
+                          src={getSafeProductImage(p)}
+                          alt=""
+                          onError={(event) => handleProductImageError(event, p)}
+                          className="w-12 h-12 rounded-xl object-cover bg-white"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate text-foreground">{p.name}</p>
                           <p className="text-sm text-sale font-extrabold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p.price)}</p>
@@ -106,14 +109,6 @@ const Header = () => {
         {/* Quick Actions */}
         <div className="flex items-center gap-1 md:gap-2">
           <NotificationDropdown />
-          <Link to="/profile?tab=wishlist" className="relative text-foreground hover:text-sale hover:bg-secondary p-2.5 rounded-full transition-all hidden md:flex items-center justify-center">
-            <Heart className="w-5 h-5" />
-            {wishlistCount > 0 && (
-              <span className="absolute 0 top-0 right-0 bg-sale text-white text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center border-2 border-background">
-                {wishlistCount}
-              </span>
-            )}
-          </Link>
           <Link to="/cart" className="relative text-foreground hover:text-primary hover:bg-secondary p-2.5 rounded-full transition-all flex items-center justify-center">
             <ShoppingCart className="w-5 h-5" />
             {totalItems > 0 && (
@@ -196,7 +191,6 @@ const Header = () => {
                         className="font-extrabold text-sm text-foreground hover:text-primary flex items-center gap-2 mb-4"
                         onClick={() => setMegaMenuOpen(false)}
                       >
-                        <span className="text-2xl bg-secondary w-10 h-10 rounded-xl flex items-center justify-center group-hover/cat:scale-110 transition-transform">{cat.icon}</span> 
                         {cat.name}
                       </Link>
                       <div className="flex flex-col gap-2">
@@ -246,7 +240,7 @@ const Header = () => {
                 className="flex items-center gap-3 py-3 px-4 text-sm font-bold text-foreground bg-secondary rounded-xl"
                 onClick={() => setMenuOpen(false)}
               >
-                <span className="text-lg">{cat.icon}</span> {cat.name}
+                {cat.name}
               </Link>
             ))}
             <div className="h-px bg-border my-4"></div>

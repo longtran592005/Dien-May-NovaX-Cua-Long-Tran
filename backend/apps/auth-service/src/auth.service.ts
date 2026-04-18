@@ -3,10 +3,43 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { PrismaService } from './prisma.service';
-import Redis from 'ioredis';
 import { OAuth2Client } from 'google-auth-library';
 
-const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:4070';
+class MockRedis {
+  private store = new Map<string, { value: string, expiry: number }>();
+  
+  async setex(key: string, seconds: number, value: string) {
+    this.store.set(key, { value, expiry: Date.now() + seconds * 1000 });
+  }
+  
+  async get(key: string) {
+    const item = this.store.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiry) {
+      this.store.delete(key);
+      return null;
+    }
+    return item.value;
+  }
+
+  async del(key: string) {
+    this.store.delete(key);
+  }
+}
+
+// Validate and normalize email service URL
+function normalizeUrl(envUrl: string | undefined, defaultUrl: string): string {
+  const url = envUrl?.trim() || defaultUrl;
+  try {
+    new URL(url);
+    return url;
+  } catch {
+    console.warn(`Invalid email service URL "${url}", falling back to "${defaultUrl}"`);
+    return defaultUrl;
+  }
+}
+
+const emailServiceUrl = normalizeUrl(process.env.EMAIL_SERVICE_URL, 'http://localhost:4070');
 
 interface AccessPayload {
   sub: string;
@@ -28,12 +61,12 @@ export class AuthService {
   private readonly accessTtlSeconds = this.parseDurationToSeconds(process.env.JWT_ACCESS_TTL || '15m');
   private readonly refreshTtlSeconds = this.parseDurationToSeconds(process.env.JWT_REFRESH_TTL || '30d');
   
-  private readonly redis: Redis;
+  private readonly redis: MockRedis;
 
   private readonly googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   constructor(private readonly prisma: PrismaService) {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.redis = new MockRedis();
   }
 
   /**
@@ -71,9 +104,7 @@ export class AuthService {
         data: {
           fullName,
           passwordHash,
-          verified: false,
-          otpCode,
-          otpExpiry
+          verified: false
         }
       });
     } else {
@@ -84,8 +115,6 @@ export class AuthService {
           fullName,
           passwordHash,
           verified: false,
-          otpCode,
-          otpExpiry,
           carts: {
             create: {} // Create empty cart
           }
@@ -134,8 +163,9 @@ export class AuthService {
       throw new BadRequestException('User already verified');
     }
 
-    // Validate OTP (check both DB and Redis)
-    if (user.otpCode !== otpCode || !user.otpExpiry || user.otpExpiry < new Date()) {
+    // Validate OTP using pure memory (Redis) to avoid SQL overhead
+    const storedOtp = await this.redis.get(`otp:${normalizedEmail}`);
+    if (!storedOtp || storedOtp !== otpCode) {
       throw new UnauthorizedException('Invalid or expired OTP');
     }
 
@@ -143,9 +173,7 @@ export class AuthService {
     const verifiedUser = await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        verified: true,
-        otpCode: null,
-        otpExpiry: null
+        verified: true
       }
     });
 
@@ -184,17 +212,8 @@ export class AuthService {
 
     // Generate new OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        otpCode,
-        otpExpiry
-      }
-    });
-
-    // Store in Redis
+    // Store strictly in Redis, removing the slow SQL UPDATE operation!
     await this.redis.setex(`otp:${normalizedEmail}`, 300, otpCode);
 
     await this.sendEmail({
@@ -236,7 +255,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.issueTokens(user.id, user.email, user.fullName || '');
+    return this.issueTokens(user.id, user.email, user.fullName || '', user.role);
   }
 
   /**
@@ -291,7 +310,7 @@ export class AuthService {
         });
       }
 
-      return this.issueTokens(user.id, user.email, user.fullName || '');
+      return this.issueTokens(user.id, user.email, user.fullName || '', user.role);
     } catch (error) {
       console.error('Google Login Error:', error);
       throw new UnauthorizedException('Google authentication failed');
@@ -327,7 +346,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.issueTokens(user.id, user.email, user.fullName || '');
+    return this.issueTokens(user.id, user.email, user.fullName || '', user.role);
   }
 
   /**
@@ -347,7 +366,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid access token');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: {
+        addresses: true
+      }
+    });
+
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -356,8 +381,61 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.fullName || '',
-      role: user.role
+      role: user.role,
+      points: user.points,
+      addresses: user.addresses
     };
+  }
+
+  async listAddresses(userId: string) {
+    return this.prisma.address.findMany({
+      where: { userId },
+      orderBy: { isDefault: 'desc' }
+    });
+  }
+
+  async addAddress(userId: string, data: any) {
+    if (data.isDefault) {
+      await this.prisma.address.updateMany({
+        where: { userId },
+        data: { isDefault: false }
+      });
+    }
+
+    return this.prisma.address.create({
+      data: {
+        ...data,
+        userId
+      }
+    });
+  }
+
+  async updateAddress(userId: string, addressId: string, data: any) {
+    const address = await this.prisma.address.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      throw new BadRequestException('Address not found or unauthorized');
+    }
+
+    if (data.isDefault) {
+      await this.prisma.address.updateMany({
+        where: { userId },
+        data: { isDefault: false }
+      });
+    }
+
+    return this.prisma.address.update({
+      where: { id: addressId },
+      data
+    });
+  }
+
+  async deleteAddress(userId: string, addressId: string) {
+    const address = await this.prisma.address.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      throw new BadRequestException('Address not found or unauthorized');
+    }
+
+    return this.prisma.address.delete({ where: { id: addressId } });
   }
 
   /**
@@ -382,14 +460,7 @@ export class AuthService {
   }
 
   async listUsers() {
-    const users: Array<{
-      id: string;
-      email: string;
-      fullName: string | null;
-      role: 'customer' | 'admin';
-      verified: boolean;
-      createdAt: Date;
-    }> = await this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -405,7 +476,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.fullName || '',
-      role: user.role,
+      role: user.role as 'customer' | 'admin',
       verified: user.verified,
       createdAt: user.createdAt
     }));
@@ -540,8 +611,7 @@ export class AuthService {
 
   // ============= PRIVATE HELPERS =============
 
-  private async issueTokens(userId: string, email: string, fullName: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  private async issueTokens(userId: string, email: string, fullName: string, role: string) {
     const tokenId = crypto.randomUUID();
 
     const accessToken = jwt.sign(
@@ -581,7 +651,7 @@ export class AuthService {
         id: userId,
         email,
         name: fullName,
-        role: user?.role
+        role: role
       }
     };
   }
@@ -623,15 +693,18 @@ export class AuthService {
     variables?: Record<string, string | number>;
   }) {
     try {
-      await fetch(new URL('/emails/send', emailServiceUrl), {
+      const emailUrl = new URL('/emails/send', emailServiceUrl);
+      await fetch(emailUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
-    } catch {
+    } catch (error) {
       // Keep auth flow resilient if email-service is temporarily unavailable.
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`Email sending failed: ${errorMsg} (to: ${payload.to})`);
     }
   }
 }

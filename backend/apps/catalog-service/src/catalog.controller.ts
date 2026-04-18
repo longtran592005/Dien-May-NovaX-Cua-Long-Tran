@@ -4,12 +4,19 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   NotFoundException,
   Param,
   Post,
   Put,
-  Query
+  Query,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
 import { CatalogService } from './catalog.service';
 
 interface UpsertProductDto {
@@ -24,6 +31,11 @@ interface UpsertProductDto {
   categorySlug: string;
   images?: string[];
 }
+
+const sanitizeCategoryFolder = (raw?: string) => {
+  const normalized = (raw || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  return normalized || 'khac';
+};
 
 @Controller('products')
 export class CatalogController {
@@ -62,6 +74,28 @@ export class CatalogController {
     return product;
   }
 
+  @Post('admin/upload')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const categoryFolder = sanitizeCategoryFolder((req.body?.category as string) || '');
+        const targetDir = join(process.cwd(), '..', 'public', 'images', 'products', categoryFolder);
+        mkdirSync(targetDir, { recursive: true });
+        cb(null, targetDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `${uniqueSuffix}${ext}`);
+      }
+    })
+  }))
+  async uploadProductImage(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const categoryFolder = sanitizeCategoryFolder((file as any)?.destination?.split(/[/\\]/).pop());
+    return { url: `/images/products/${categoryFolder}/${file.filename}` };
+  }
+
   @Post('admin/create')
   async createProduct(@Body() payload: UpsertProductDto) {
     try {
@@ -91,5 +125,26 @@ export class CatalogController {
     } catch {
       throw new NotFoundException('Product not found');
     }
+  }
+
+  // ============= STORES & REVIEWS =============
+
+  @Get('stores/list')
+  async listStores() {
+    return this.catalogService.listStores();
+  }
+
+  @Get(':id/stock')
+  async getStoreStock(@Param('id') id: string) {
+    return this.catalogService.getStoreStock(id);
+  }
+
+  @Post(':id/reviews')
+  async addReview(
+    @Param('id') productId: string,
+    @Headers('x-user-id') userId: string,
+    @Body() data: any
+  ) {
+    return this.catalogService.addReview(userId, productId, data);
   }
 }

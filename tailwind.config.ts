@@ -15,7 +15,9 @@ export default {
     },
     extend: {
       fontFamily: {
+        /* Phông chữ hỗ trợ Tiếng Việt tốt nhất */
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        content: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

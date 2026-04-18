@@ -17,6 +17,19 @@ export default defineConfig(({ mode }) => ({
           ? process.env.VITE_API_BASE_URL.replace(/\/api\/.*$/, '') 
           : "http://localhost:3000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            // Silence ECONNREFUSED errors when backend is not running
+            if ('code' in err && (err as NodeJS.ErrnoException).code === 'ECONNREFUSED') {
+              if (res && 'writeHead' in res) {
+                (res as import('http').ServerResponse).writeHead(502, { 'Content-Type': 'application/json' });
+                (res as import('http').ServerResponse).end(JSON.stringify({ error: 'Backend not available' }));
+              }
+              return;
+            }
+            console.error('[proxy]', err.message);
+          });
+        },
       },
     },
   },

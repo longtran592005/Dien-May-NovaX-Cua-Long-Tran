@@ -10,12 +10,18 @@ import {
   Patch,
   Put,
   Query,
-  UnauthorizedException
+  UnauthorizedException,
+  UseInterceptors,
+  UploadedFile
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
-type PaymentMethod = 'cod' | 'vnpay' | 'momo' | 'stripe';
+type PaymentMethod = 'cod' | 'vnpay' | 'stripe';
 
 type AdminOrderItem = {
   productId: string;
@@ -97,13 +103,70 @@ type PaginatedResult<T> = {
   total: number;
 };
 
-const runtimeEnv = (globalThis as any)['process']?.env || {};
+// Get environment variables from multiple possible sources
+function getEnv(key: string): string | undefined {
+  // Try global process.env first (Node.js)
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  // Try globalThis.process.env
+  if (typeof globalThis !== 'undefined') {
+    const gThis = globalThis as any;
+    if (gThis.process?.env?.[key]) {
+      return gThis.process.env[key];
+    }
+  }
+  return undefined;
+}
 
-const authServiceUrl = runtimeEnv.AUTH_SERVICE_URL || 'http://auth-service:4010';
-const catalogServiceUrl = runtimeEnv.CATALOG_SERVICE_URL || 'http://catalog-service:4020';
-const cartServiceUrl = runtimeEnv.CART_SERVICE_URL || 'http://cart-service:4030';
-const orderServiceUrl = runtimeEnv.ORDER_SERVICE_URL || 'http://order-service:4040';
-const paymentServiceUrl = runtimeEnv.PAYMENT_SERVICE_URL || 'http://payment-service:4050';
+// Validate and normalize service URLs
+function normalizeServiceUrl(envUrl: string | undefined, defaultUrl: string): string {
+  // Handle null, undefined, or whitespace-only strings
+  const url = (envUrl || '').trim() || defaultUrl;
+  
+  // Validate that it's a valid URL (must start with http:// or https://)
+  try {
+    new URL(url);
+    console.log(`Service URL initialized: ${url.split('://')[0]}://${url.split('://')[1]?.split(':')[0]}:${new URL(url).port || (url.includes('https') ? 443 : 80)}`);
+    return url;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`Invalid service URL "${url}" (${errorMsg}), falling back to "${defaultUrl}"`);
+    return defaultUrl;
+  }
+}
+
+const authServiceUrl = normalizeServiceUrl(getEnv('AUTH_SERVICE_URL'), 'http://localhost:4010');
+const catalogServiceUrl = normalizeServiceUrl(getEnv('CATALOG_SERVICE_URL'), 'http://localhost:4020');
+const cartServiceUrl = normalizeServiceUrl(getEnv('CART_SERVICE_URL'), 'http://localhost:4030');
+const orderServiceUrl = normalizeServiceUrl(getEnv('ORDER_SERVICE_URL'), 'http://localhost:4040');
+const paymentServiceUrl = normalizeServiceUrl(getEnv('PAYMENT_SERVICE_URL'), 'http://localhost:4050');
+
+// Helper function to safely construct service URLs
+function buildServiceUrl(baseUrl: string, path: string): URL {
+  try {
+    // Validate baseUrl is a string and not empty/null
+    if (!baseUrl || typeof baseUrl !== 'string') {
+      throw new Error(`Invalid baseUrl type or value: ${typeof baseUrl} = "${baseUrl}"`);
+    }
+    
+    // Validate baseUrl starts with protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      throw new Error(`baseUrl must start with http:// or https://: "${baseUrl}"`);
+    }
+    
+    return new URL(path, baseUrl);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to construct URL with base="${baseUrl}" and path="${path}": ${errorMsg}`);
+    throw new Error(`Invalid service URL configuration. Base: "${baseUrl}", Path: "${path}", Error: ${errorMsg}`);
+  }
+}
+
+function sanitizeCategoryFolder(raw?: string): string {
+  const normalized = (raw || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  return normalized || 'khac';
+}
 
 @Controller()
 export class GatewayController {
@@ -113,7 +176,7 @@ export class GatewayController {
     }
 
     try {
-      const response = await fetch(new URL('/auth/me', authServiceUrl), {
+      const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/me'), {
         headers: {
           Authorization: authorization
         }
@@ -132,7 +195,7 @@ export class GatewayController {
 
   @Post('auth/register')
   async register(@Body() payload: { email: string; password: string; fullName: string }) {
-    const response = await fetch(new URL('/auth/register', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -150,7 +213,7 @@ export class GatewayController {
 
   @Post('auth/verify-otp')
   async verifyOtp(@Body() payload: { email: string; otpCode: string }) {
-    const response = await fetch(new URL('/auth/verify-otp', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/verify-otp'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -168,7 +231,7 @@ export class GatewayController {
 
   @Post('auth/request-otp')
   async requestOtp(@Body() payload: { email: string }) {
-    const response = await fetch(new URL('/auth/request-otp', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/request-otp'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -193,7 +256,7 @@ export class GatewayController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string
   ) {
-    const url = new URL('/products', catalogServiceUrl);
+    const url = buildServiceUrl(catalogServiceUrl, '/products');
     if (q) url.searchParams.set('q', q);
     if (category) url.searchParams.set('category', category);
     if (minPrice) url.searchParams.set('minPrice', minPrice);
@@ -207,13 +270,35 @@ export class GatewayController {
 
   @Get('products/:slug')
   async getProductBySlug(@Param('slug') slug: string) {
-    const response = await fetch(new URL(`/products/${slug}`, catalogServiceUrl));
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, `/products/${slug}`));
     return response.json();
+  }
+
+  @Post('admin/products/upload')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const categoryFolder = sanitizeCategoryFolder((req.body?.category as string) || '');
+        const targetDir = join(process.cwd(), '..', 'public', 'images', 'products', categoryFolder);
+        mkdirSync(targetDir, { recursive: true });
+        cb(null, targetDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `${uniqueSuffix}${ext}`);
+      }
+    })
+  }))
+  async uploadProductImage(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const categoryFolder = sanitizeCategoryFolder((file as any)?.destination?.split(/[/\\]/).pop());
+    return { url: `/images/products/${categoryFolder}/${file.filename}` };
   }
 
   @Post('admin/products')
   async createProduct(@Body() payload: Record<string, unknown>) {
-    const response = await fetch(new URL('/products/admin/create', catalogServiceUrl), {
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, '/products/admin/create'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -231,7 +316,7 @@ export class GatewayController {
 
   @Put('admin/products/:id')
   async updateProduct(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
-    const response = await fetch(new URL(`/products/admin/${id}`, catalogServiceUrl), {
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, `/products/admin/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -249,7 +334,7 @@ export class GatewayController {
 
   @Delete('admin/products/:id')
   async deactivateProduct(@Param('id') id: string) {
-    const response = await fetch(new URL(`/products/admin/${id}`, catalogServiceUrl), {
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, `/products/admin/${id}`), {
       method: 'DELETE'
     });
 
@@ -263,7 +348,7 @@ export class GatewayController {
 
   @Post('auth/login')
   async login(@Body() payload: { email: string; password: string }) {
-    const response = await fetch(new URL('/auth/login', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -288,7 +373,7 @@ export class GatewayController {
 
   @Post('auth/google')
   async googleLogin(@Body() payload: { idToken: string }) {
-    const response = await fetch(new URL('/auth/google', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/google'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -306,7 +391,7 @@ export class GatewayController {
 
   @Post('auth/refresh')
   async refresh(@Body() payload: { refreshToken: string }) {
-    const response = await fetch(new URL('/auth/refresh', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/refresh'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -323,7 +408,7 @@ export class GatewayController {
 
   @Get('auth/me')
   async me(@Headers('authorization') authorization?: string) {
-    const response = await fetch(new URL('/auth/me', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/me'), {
       headers: {
         Authorization: authorization || ''
       }
@@ -338,7 +423,7 @@ export class GatewayController {
 
   @Post('auth/logout')
   async logout(@Headers('authorization') authorization?: string) {
-    const response = await fetch(new URL('/auth/logout', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/logout'), {
       method: 'POST',
       headers: {
         Authorization: authorization || ''
@@ -354,7 +439,7 @@ export class GatewayController {
 
   @Post('auth/request-password-reset')
   async requestPasswordReset(@Body() payload: { email: string }) {
-    const response = await fetch(new URL('/auth/request-password-reset', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/request-password-reset'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -372,7 +457,7 @@ export class GatewayController {
 
   @Post('auth/reset-password')
   async resetPassword(@Body() payload: { email: string; otpCode: string; newPassword: string }) {
-    const response = await fetch(new URL('/auth/reset-password', authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/reset-password'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -391,7 +476,7 @@ export class GatewayController {
   @Get('cart')
   async getCart(@Headers('authorization') authorization?: string) {
     const userId = await this.resolveUserIdFromAuthorization(authorization);
-    const response = await fetch(new URL('/cart', cartServiceUrl), {
+    const response = await fetch(buildServiceUrl(cartServiceUrl, '/cart'), {
       headers: {
         'x-user-id': userId
       }
@@ -405,7 +490,7 @@ export class GatewayController {
     @Headers('authorization') authorization?: string
   ) {
     const userId = await this.resolveUserIdFromAuthorization(authorization);
-    const response = await fetch(new URL('/cart', cartServiceUrl), {
+    const response = await fetch(buildServiceUrl(cartServiceUrl, '/cart'), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -417,12 +502,24 @@ export class GatewayController {
     return response.json();
   }
 
+  @Get('orders')
+  async listOrders(@Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(orderServiceUrl, '/orders'), {
+      headers: {
+        'x-user-id': userId
+      }
+    });
+
+    return response.json();
+  }
+
   @Post('orders')
   async createOrder(
     @Body()
     payload: {
       shippingAddressId: string;
-      paymentMethod: 'cod' | 'vnpay' | 'momo';
+      paymentMethod: 'cod' | 'vnpay';
       note?: string;
       items?: Array<{ productId: string; quantity: number }>;
       total?: number;
@@ -430,7 +527,7 @@ export class GatewayController {
     @Headers('authorization') authorization?: string
   ) {
     const userId = await this.resolveUserIdFromAuthorization(authorization);
-    const response = await fetch(new URL('/orders', orderServiceUrl), {
+    const response = await fetch(buildServiceUrl(orderServiceUrl, '/orders'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -450,7 +547,7 @@ export class GatewayController {
     @Query('page') pageQuery?: string,
     @Query('pageSize') pageSizeQuery?: string
   ): Promise<PaginatedResult<AdminOrder>> {
-    const response = await fetch(new URL('/orders', orderServiceUrl));
+    const response = await fetch(buildServiceUrl(orderServiceUrl, '/orders'));
     const orders = (await response.json()) as AdminOrder[];
 
     const page = Math.max(1, Number(pageQuery) || 1);
@@ -498,9 +595,9 @@ export class GatewayController {
   @Get('admin/analytics')
   async getAdminAnalytics(@Query('rangeDays') rangeDaysQuery?: string) {
     const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
-      fetch(new URL('/orders', orderServiceUrl)),
-      fetch(new URL('/auth/admin/users', authServiceUrl)),
-      fetch(new URL('/products?page=1&pageSize=500', catalogServiceUrl))
+      fetch(buildServiceUrl(orderServiceUrl, '/orders')),
+      fetch(buildServiceUrl(authServiceUrl, '/auth/admin/users')),
+      fetch(buildServiceUrl(catalogServiceUrl, '/products?page=1&pageSize=500'))
     ]);
 
     if (!ordersResponse.ok || !usersResponse.ok || !productsResponse.ok) {
@@ -589,7 +686,7 @@ export class GatewayController {
 
   @Get('admin/orders/:id')
   async getAdminOrder(@Param('id') id: string) {
-    const response = await fetch(new URL(`/orders/${id}`, orderServiceUrl));
+    const response = await fetch(buildServiceUrl(orderServiceUrl, `/orders/${id}`));
     return response.json();
   }
 
@@ -598,7 +695,7 @@ export class GatewayController {
     @Param('id') id: string,
     @Body() payload: { status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' }
   ) {
-    const response = await fetch(new URL(`/orders/${id}/status`, orderServiceUrl), {
+    const response = await fetch(buildServiceUrl(orderServiceUrl, `/orders/${id}/status`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -623,7 +720,7 @@ export class GatewayController {
     @Query('page') pageQuery?: string,
     @Query('pageSize') pageSizeQuery?: string
   ): Promise<PaginatedResult<AdminUser>> {
-    const response = await fetch(new URL('/auth/admin/users', authServiceUrl));
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/admin/users'));
     const users = (await response.json()) as AdminUser[];
 
     const page = Math.max(1, Number(pageQuery) || 1);
@@ -673,7 +770,7 @@ export class GatewayController {
 
   @Patch('admin/users/:id/role')
   async updateAdminUserRole(@Param('id') id: string, @Body() payload: { role: 'customer' | 'admin' }) {
-    const response = await fetch(new URL(`/auth/admin/users/${id}/role`, authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, `/auth/admin/users/${id}/role`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -691,7 +788,7 @@ export class GatewayController {
 
   @Patch('admin/users/:id/verified')
   async updateAdminUserVerified(@Param('id') id: string, @Body() payload: { verified: boolean }) {
-    const response = await fetch(new URL(`/auth/admin/users/${id}/verified`, authServiceUrl), {
+    const response = await fetch(buildServiceUrl(authServiceUrl, `/auth/admin/users/${id}/verified`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -707,36 +804,63 @@ export class GatewayController {
     return body;
   }
 
+  @Post('orders/:id/cancel')
+  async cancelOrder(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(orderServiceUrl, `/orders/${id}/cancel`), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      }
+    });
+
+    const body = await response.json();
+    if (!response.ok) throw new BadRequestException(body);
+    return body;
+  }
+
+  // ============= PAYMENTS =============
+
   @Post('payments/initiate')
   async initiatePayment(
     @Body()
     payload: {
       orderId: string;
       amount: number;
-      method: 'cod' | 'vnpay' | 'momo' | 'stripe';
+      method: 'cod' | 'vnpay' | 'stripe';
       returnUrl?: string;
     }
   ) {
-    const response = await fetch(new URL('/payments/initiate', paymentServiceUrl), {
+    const response = await fetch(buildServiceUrl(paymentServiceUrl, '/payments/initiate'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      throw new BadRequestException(`Payment service error: ${response.statusText}`);
+    }
 
     return response.json();
   }
 
   @Get('payments/verify/:transactionId')
   async verifyPayment(@Param('transactionId') transactionId: string) {
-    const response = await fetch(new URL(`/payments/verify/${transactionId}`, paymentServiceUrl));
+    const response = await fetch(buildServiceUrl(paymentServiceUrl, `/payments/verify/${transactionId}`));
+    
+    if (!response.ok) {
+      throw new BadRequestException(`Payment verification failed: ${response.statusText}`);
+    }
+    
     return response.json();
   }
 
   @Post('payments/callback')
   async paymentCallback(@Body() payload: Record<string, unknown>) {
-    const response = await fetch(new URL('/payments/callback', paymentServiceUrl), {
+    const response = await fetch(buildServiceUrl(paymentServiceUrl, '/payments/callback'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -744,6 +868,118 @@ export class GatewayController {
       body: JSON.stringify(payload)
     });
 
+    if (!response.ok) {
+      throw new BadRequestException(`Payment callback processing failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * VNPay Return Handler
+   * GET /api/v1/payment/vnpay-return
+   */
+  @Get('payment/vnpay-return')
+  async vnpayReturn(@Query() query: any) {
+    console.log('VNPay Return:', query);
+    const vnp_ResponseCode = query.vnp_ResponseCode;
+    const transactionId = query.vnp_TxnRef;
+
+    // In a real app, we would verify the hash here again in the gateway or payment service
+    // For now, we update order status based on vnp_ResponseCode (00 is success)
+    
+    // Redirect user to frontend success/fail page
+    const success = vnp_ResponseCode === '00';
+    return `
+      <html>
+        <head><title>Payment Redirect</title></head>
+        <body>
+          <script>
+            window.location.href = 'http://localhost:8080/checkout?status=${success ? 'success' : 'fail'}&transactionId=${transactionId}';
+          </script>
+        </body>
+      </html>
+    `;
+  }
+
+  // ============= ADDRESS BOOK =============
+
+  @Get('auth/addresses')
+  async listAddresses(@Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/addresses'), {
+      headers: { 'x-user-id': userId }
+    });
+    return response.json();
+  }
+
+  @Post('auth/addresses')
+  async addAddress(@Body() data: any, @Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(authServiceUrl, '/auth/addresses'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  }
+
+  @Put('auth/addresses/:id')
+  async updateAddress(@Param('id') id: string, @Body() data: any, @Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(authServiceUrl, `/auth/addresses/${id}`), {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  }
+
+  @Delete('auth/addresses/:id')
+  async deleteAddress(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(authServiceUrl, `/auth/addresses/${id}`), {
+      method: 'DELETE',
+      headers: { 'x-user-id': userId }
+    });
+    return response.json();
+  }
+
+  // ============= STORES & REVIEWS =============
+
+  @Get('stores')
+  async listStores() {
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, '/products/stores/list'));
+    return response.json();
+  }
+
+  @Get('products/:id/stock')
+  async getProductStoreStock(@Param('id') id: string) {
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, `/products/${id}/stock`));
+    return response.json();
+  }
+
+  @Post('products/:id/reviews')
+  async addProductReview(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Headers('authorization') authorization?: string
+  ) {
+    const userId = await this.resolveUserIdFromAuthorization(authorization);
+    const response = await fetch(buildServiceUrl(catalogServiceUrl, `/products/${id}/reviews`), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId
+      },
+      body: JSON.stringify(data)
+    });
     return response.json();
   }
 }
