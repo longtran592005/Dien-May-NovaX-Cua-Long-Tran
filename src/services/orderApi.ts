@@ -9,10 +9,12 @@ export interface CreateOrderItem {
 
 export interface CreateOrderRequest {
   shippingAddressId: string;
-  paymentMethod: 'cod' | 'vnpay';
+  paymentMethod: 'cod' | 'vnpay' | 'stripe' | 'momo';
   deliveryMethod?: 'standard' | '2h';
   note?: string;
   items?: CreateOrderItem[];
+  couponCode?: string;
+  customerTier?: string;
   total?: number;
   subtotal?: number;
   shippingFee?: number;

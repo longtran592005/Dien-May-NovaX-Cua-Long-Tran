@@ -31,6 +31,13 @@ interface ResetPasswordDto {
   newPassword: string;
 }
 
+interface CreateStaffDto {
+  email: string;
+  fullName: string;
+  tempPassword: string;
+  role?: 'admin' | 'manager' | 'sales' | 'warehouse' | 'staff';
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -109,11 +116,29 @@ export class AuthController {
   }
 
   /**
+   * Admin only: list staff accounts
+   * GET /auth/admin/staff
+   */
+  @Get('admin/staff')
+  async listStaff() {
+    return this.authService.listStaff();
+  }
+
+  /**
+   * Admin only: create staff account
+   * POST /auth/admin/staff
+   */
+  @Post('admin/staff')
+  async createStaff(@Body() dto: CreateStaffDto) {
+    return this.authService.createStaff(dto.email, dto.tempPassword, dto.fullName, dto.role);
+  }
+
+  /**
    * Admin only: update user role
    * PATCH /auth/admin/users/:id/role
    */
   @Patch('admin/users/:id/role')
-  async updateUserRole(@Param('id') id: string, @Body() dto: { role: 'customer' | 'admin' }) {
+  async updateUserRole(@Param('id') id: string, @Body() dto: { role: 'customer' | 'admin' | 'manager' | 'sales' | 'warehouse' | 'staff' }) {
     return this.authService.updateUserRole(id, dto.role);
   }
 
@@ -124,6 +149,15 @@ export class AuthController {
   @Patch('admin/users/:id/verified')
   async updateUserVerified(@Param('id') id: string, @Body() dto: { verified: boolean }) {
     return this.authService.updateUserVerified(id, dto.verified);
+  }
+
+  /**
+   * Admin only: update staff verification status
+   * PATCH /auth/admin/staff/:id/verified
+   */
+  @Patch('admin/staff/:id/verified')
+  async updateStaffVerified(@Param('id') id: string, @Body() dto: { verified: boolean }) {
+    return this.authService.updateStaffVerified(id, dto.verified);
   }
 
   /**

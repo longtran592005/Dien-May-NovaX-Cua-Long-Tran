@@ -6,7 +6,7 @@
   "scripts": {
     "predev:all": "node scripts/free-ports.cjs",
     "dev": "vite",
-    "dev:backend": "concurrently \"npm run dev:auth --prefix backend\" \"npm run dev:catalog --prefix backend\" \"npm run dev:cart --prefix backend\" \"npm run dev:order --prefix backend\" \"npm run dev:payment --prefix backend\" \"npm run dev:gateway --prefix backend\"",
+    "dev:backend": "npm run dev:all --prefix backend",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",

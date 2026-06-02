@@ -14,9 +14,18 @@ export interface Product {
   specs?: Record<string, string>;
   description?: string;
   inStock: boolean;
+  stock?: number;
+  minStockThreshold?: number;
+  reorderTarget?: number;
   isNew?: boolean;
   isBestSeller?: boolean;
   tags?: string[];
+  activePromotion?: { 
+    name: string; 
+    endsAt: string; 
+    discountValue: number; 
+    discountType: string;
+  };
 }
 
 export interface Category {

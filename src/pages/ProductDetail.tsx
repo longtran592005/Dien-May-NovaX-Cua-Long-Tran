@@ -57,7 +57,7 @@ const ProductDetail = () => {
 
       // Related list is non-critical; do not break detail page if this request fails.
       try {
-        const list = await fetchProducts({ page: 1, pageSize: 100 });
+        const list = await fetchProducts({ page: 1, pageSize: 40 });
         if (isMounted) {
           setAllProducts(list.items.length > 0 ? list.items : fallbackProducts);
         }
@@ -139,6 +139,9 @@ const ProductDetail = () => {
 
   const wishlisted = isInWishlist(product.id);
   const compared = isInComparison(product.id);
+  const availableStock = typeof product.stock === "number" ? Math.max(0, product.stock) : (product.inStock ? 999 : 0);
+  const isPurchasable = product.inStock && availableStock > 0;
+  const maxSelectableQuantity = Math.max(1, Math.min(availableStock, 10));
   const similarProducts = allProducts.filter(p => p.category === product.category && p.id !== product.id);
   const crossSellProducts = allProducts.filter(p => p.category !== product.category).slice(0, 6);
 
@@ -302,28 +305,39 @@ const ProductDetail = () => {
 
             {/* Quantity & Add to Cart */}
             <div className="flex flex-col gap-4 mb-8">
+              {!isPurchasable && (
+                <div className="rounded-xl border border-sale/30 bg-sale/5 px-4 py-3 text-sm font-bold text-sale">
+                  Sản phẩm hiện đã hết hàng. Bạn có thể theo dõi và quay lại khi có hàng.
+                </div>
+              )}
+
               <div className="flex items-center gap-4">
                 <span className="text-sm font-bold text-foreground font-inter uppercase tracking-wide">Số lượng</span>
                 <div className="flex items-center bg-secondary/50 rounded-xl border border-border/50 w-max overflow-hidden">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-white/50 transition-colors"><Minus className="w-4 h-4" /></button>
+                  <button disabled={!isPurchasable} onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-white/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><Minus className="w-4 h-4" /></button>
                   <span className="w-10 text-center font-black text-lg">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-white/50 transition-colors"><Plus className="w-4 h-4" /></button>
+                  <button disabled={!isPurchasable} onClick={() => setQuantity(Math.min(maxSelectableQuantity, quantity + 1))} className="p-3 hover:bg-white/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><Plus className="w-4 h-4" /></button>
                 </div>
+                {isPurchasable && availableStock <= 10 && (
+                  <span className="text-xs font-bold text-sale">Còn {availableStock} sản phẩm</span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 <button
-                  onClick={() => { for (let i = 0; i < quantity; i++) addToCart(product); }}
-                  className="flex-1 flex flex-col items-center justify-center gap-1 gradient-accent text-white py-4 rounded-[1.2rem] font-black shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  onClick={() => { if (!isPurchasable) return; for (let i = 0; i < quantity; i++) addToCart(product); }}
+                  disabled={!isPurchasable}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 gradient-accent text-white py-4 rounded-[1.2rem] font-black shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  <span className="text-lg">CHỐT ĐƠN NGAY</span>
+                  <span className="text-lg">{isPurchasable ? "CHỐT ĐƠN NGAY" : "HẾT HÀNG"}</span>
                   <span className="text-[10px] font-bold opacity-80">Giao nhanh tận nơi toàn quốc</span>
                 </button>
                 <button
-                  onClick={() => { for (let i = 0; i < quantity; i++) addToCart(product); }}
-                  className="flex flex-col items-center justify-center gap-1 bg-white text-foreground py-4 rounded-[1.2rem] font-bold border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+                  onClick={() => { if (!isPurchasable) return; for (let i = 0; i < quantity; i++) addToCart(product); }}
+                  disabled={!isPurchasable}
+                  className="flex flex-col items-center justify-center gap-1 bg-white text-foreground py-4 rounded-[1.2rem] font-bold border-2 border-border hover:border-primary hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:bg-white"
                 >
-                  <span className="text-lg flex items-center gap-2 font-black"><ShoppingCart className="w-5 h-5 text-primary" /> THÊM GIỎ</span>
+                  <span className="text-lg flex items-center gap-2 font-black"><ShoppingCart className="w-5 h-5 text-primary" /> {isPurchasable ? "THÊM GIỎ" : "CHỈ XEM"}</span>
                   <span className="text-[10px] font-bold text-muted-foreground">Mua nhiều giảm sâu</span>
                 </button>
               </div>

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { getSafeProductImage, handleProductImageError } from "@/lib/productImage";
+import { getAdminHomePath, hasAdminWorkspaceAccess, getAdminRoleLabel } from "@/lib/adminRoles";
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -127,9 +128,12 @@ const Header = () => {
                   </div>
                   <span className="text-sm font-semibold truncate max-w-[100px]">{user?.name}</span>
                 </Link>
-                {user?.role === 'admin' && (
-                  <Link to="/admin" className="text-xs font-bold px-3 py-2 rounded-full border border-primary text-primary hover:bg-secondary transition-colors">
-                    Admin
+                {hasAdminWorkspaceAccess(user?.role) && (
+                  <Link
+                    to={getAdminHomePath(user?.role)}
+                    className="text-xs font-bold px-3 py-2 rounded-full border border-primary text-primary hover:bg-secondary transition-colors"
+                  >
+                    {getAdminRoleLabel(user?.role)}
                   </Link>
                 )}
                 <button onClick={() => void logout()} className="text-xs font-bold px-3 py-2 rounded-full border border-border hover:bg-secondary transition-colors">
@@ -259,6 +263,11 @@ const Header = () => {
                   <Link to="/profile" className="flex items-center justify-center gap-2 gradient-primary text-white py-3 rounded-xl font-bold" onClick={() => setMenuOpen(false)}>
                     Tài khoản của tôi
                   </Link>
+                    {hasAdminWorkspaceAccess(user?.role) && (
+                      <Link to={getAdminHomePath(user?.role)} className="flex items-center justify-center gap-2 border border-primary text-primary py-3 rounded-xl font-bold" onClick={() => setMenuOpen(false)}>
+                        {getAdminRoleLabel(user?.role)}
+                      </Link>
+                    )}
                   <button onClick={() => { logout(); setMenuOpen(false); }} className="py-3 text-sm font-bold text-destructive">
                     Đăng xuất
                   </button>

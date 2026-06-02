@@ -177,12 +177,25 @@ export class CatalogService {
   }
 
   async addReview(userId: string, productId: string, data: any) {
+    const resolvedProductId = await this.resolvePersistedProductId(productId);
+    if (!resolvedProductId) {
+      return {
+        id: `fallback-review-${Date.now()}`,
+        productId,
+        userId,
+        rating: data.rating,
+        comment: data.comment,
+        isVerified: false,
+        createdAt: new Date().toISOString()
+      };
+    }
+
     // Check if verified buyer
     const orders = await this.prisma.order.findMany({
       where: {
         userId,
         status: 'delivered',
-        items: { some: { productId } }
+        items: { some: { productId: resolvedProductId } }
       }
     });
 
@@ -192,7 +205,7 @@ export class CatalogService {
       where: {
         userId_productId: {
           userId,
-          productId
+          productId: resolvedProductId
         }
       },
       update: {
@@ -201,7 +214,7 @@ export class CatalogService {
         isVerified
       },
       create: {
-        productId,
+        productId: resolvedProductId,
         userId,
         rating: data.rating,
         comment: data.comment,
@@ -211,13 +224,13 @@ export class CatalogService {
 
     // Update product rating average
     const reviews = await this.prisma.productReview.findMany({
-      where: { productId }
+      where: { productId: resolvedProductId }
     });
 
     const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
     
     await this.prisma.product.update({
-      where: { id: productId },
+      where: { id: resolvedProductId },
       data: {
         rating: avgRating,
         reviewCount: reviews.length
@@ -225,6 +238,32 @@ export class CatalogService {
     });
 
     return review;
+  }
+
+  private async resolvePersistedProductId(productRef: string) {
+    const byId = await this.prisma.product.findUnique({
+      where: { id: productRef },
+      select: { id: true }
+    });
+
+    if (byId) {
+      return byId.id;
+    }
+
+    const fallbackItem = fallbackProducts.find(
+      (item) => item.id === productRef || item.slug === productRef
+    );
+
+    if (!fallbackItem) {
+      return null;
+    }
+
+    const bySlug = await this.prisma.product.findUnique({
+      where: { slug: fallbackItem.slug },
+      select: { id: true }
+    });
+
+    return bySlug?.id ?? null;
   }
 
   async listStores() {

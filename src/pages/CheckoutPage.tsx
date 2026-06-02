@@ -61,6 +61,23 @@ export default function CheckoutPage() {
       return;
     }
 
+    const unavailableItems = items.filter((item) => {
+      if (!item.product.inStock) {
+        return true;
+      }
+
+      if (typeof item.product.stock !== 'number') {
+        return false;
+      }
+
+      return item.product.stock <= 0 || item.quantity > item.product.stock;
+    });
+
+    if (unavailableItems.length > 0) {
+      toast.error('Giỏ hàng có sản phẩm hết hàng hoặc vượt số lượng tồn kho');
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
       const order = await createOrder({
@@ -68,6 +85,7 @@ export default function CheckoutPage() {
         paymentMethod,
         deliveryMethod,
         note: 'Ecosystem Order',
+        couponCode: appliedCoupon?.code,
         total: finalTotal,
         subtotal: totalPrice,
         shippingFee,

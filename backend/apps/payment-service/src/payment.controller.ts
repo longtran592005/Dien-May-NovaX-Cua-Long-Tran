@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 
-type PaymentMethod = 'cod' | 'vnpay' | 'stripe';
+type PaymentMethod = 'cod' | 'vnpay' | 'stripe' | 'momo';
 
 interface InitiatePaymentDto {
   orderId: string;
@@ -27,5 +27,14 @@ export class PaymentController {
   @Post('callback')
   callback(@Body() payload: Record<string, unknown>) {
     return this.paymentService.callback(payload);
+  }
+
+  @Get('by-order')
+  getByOrderIds(@Query('orderIds') orderIds?: string) {
+    const parsedOrderIds = (orderIds || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return this.paymentService.getByOrderIds(parsedOrderIds);
   }
 }

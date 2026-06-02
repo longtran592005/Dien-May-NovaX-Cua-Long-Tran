@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // UserRole ENUM mapped to String: "customer", "admin"
@@ -69,6 +69,8 @@ model Product {
   reviewCount   Int        @default(0)
   inStock       Boolean    @default(true)
   stock         Int        @default(0)
+  minStockThreshold Int    @default(5)
+  reorderTarget Int        @default(20)
   isActive      Boolean    @default(true)
   categoryId    String
   category      Category   @relation(fields: [categoryId], references: [id])
@@ -77,8 +79,12 @@ model Product {
   reviews       ProductReview[]
   stocks        StoreStock[]
   warranties    Warranty[]
+  warehouseInventory WarehouseProduct[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
+  @@index([stock])
+  @@index([minStockThreshold])
 }
 
 model ProductImage {
@@ -137,14 +143,15 @@ model Order {
   discountAmount    Int           @default(0)
   usedPoints        Int           @default(0)
   total             Int
+  pricingSnapshot   Json?
   shippingAddressId String
   deliveryMethod    String        @default("standard") // standard, express_2h, pickup
   note              String?
   user              User          @relation(fields: [userId], references: [id])
   shippingAddress   Address       @relation(fields: [shippingAddressId], references: [id])
   items             OrderItem[]
-  payment           Payment?
   warranties        Warranty[]
+  shipment          OrderShipment?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 }
@@ -230,3 +237,213 @@ model Warranty {
   product      Product  @relation(fields: [productId], references: [id])
   createdAt    DateTime @default(now())
 }
+
+model Promotion {
+  id             String                   @id @default(uuid())
+  name           String
+  code           String?                  @unique
+  type           String
+  status         String                   @default("draft")
+  discountType   String
+  discountValue  Int
+  maxDiscount    Int?
+  minOrderAmount Int?
+  priority       Int                      @default(100)
+  isExclusive    Boolean                  @default(false)
+  startsAt       DateTime
+  endsAt         DateTime
+  usageLimit     Int?
+  usedCount      Int                      @default(0)
+  targetTier     String?
+  metadata       Json?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  productScopes  PromotionProductScope[]
+  categoryScopes PromotionCategoryScope[]
+  promotionAudits PromotionAudit[]
+
+  @@index([status, startsAt, endsAt])
+  @@index([type, status])
+}
+
+model PromotionProductScope {
+  id           String    @id @default(uuid())
+  promotionId  String
+  productId    String
+  minQuantity  Int       @default(1)
+  bonusProduct String?
+  createdAt    DateTime  @default(now())
+  promotion    Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, productId])
+  @@index([productId])
+}
+
+model PromotionCategoryScope {
+  id           String    @id @default(uuid())
+  promotionId  String
+  categorySlug String
+  createdAt    DateTime  @default(now())
+  promotion    Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, categorySlug])
+  @@index([categorySlug])
+}
+
+model ShippingZone {
+  id           String          @id @default(uuid())
+  name         String          // "Zone 1: Nội thành HN", "Zone 2: Ngoại thành HN"
+  provinceCode String?         // Vietnam province code for primary matching
+  slug         String          @unique
+  priority     Int             @default(100) // Lower = higher priority
+  rules        ShippingRule[]
+  shipments    OrderShipment[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([slug])
+}
+
+model ShippingRule {
+  id           String         @id @default(uuid())
+  zoneId       String
+  zone         ShippingZone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  // Distance based: 0-5km, 5-10km, 10-20km, 20+km (null = applies to all)
+  minDistance  Int?           // km
+  maxDistance  Int?           // km, null = no upper limit
+  // Weight based: lightweight, standard, bulky
+  minWeight    Int?           // grams
+  maxWeight    Int?           // grams, null = no upper limit
+  // Fee calculation
+  baseFee      Int            // base shipping fee in VND
+  perKmFee     Int            @default(0) // additional fee per km
+  weightFactor Int            @default(0) // additional fee per 1000g
+  bulkyFactor  Float          @default(1.0) // multiplier for bulky items
+  maxFee       Int?           // cap on shipping fee
+  minOrderAmount Int?         // minimum order to apply rule
+  // Metadata
+  description  String?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([zoneId, minDistance, maxDistance, minWeight, maxWeight])
+  @@index([zoneId])
+  @@index([isActive])
+}
+
+model Warehouse {
+  id           String            @id @default(uuid())
+  name         String
+  code         String            @unique
+  province     String
+  district     String
+  address      String
+  phone        String?
+  isPrimary    Boolean           @default(false) // Default allocation target
+  capacity     Int?              // Total capacity in units
+  inventory    WarehouseProduct[]
+  shipments    OrderShipment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([province, district])
+  @@index([isPrimary])
+}
+
+model WarehouseProduct {
+  id         String    @id @default(uuid())
+  warehouseId String
+  warehouse  Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int       @default(0)
+  reserved   Int       @default(0) // Reserved for pending orders
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([warehouseId, productId])
+  @@index([productId])
+}
+
+model OrderShipment {
+  id              String    @id @default(uuid())
+  orderId         String    @unique
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  warehouseId     String
+  warehouse       Warehouse @relation(fields: [warehouseId], references: [id])
+  shippingZoneId  String
+  shippingZone    ShippingZone @relation(fields: [shippingZoneId], references: [id])
+  estimatedDays   Int       // e.g., 2-3 days
+  shippingFee     Int       // calculated fee in VND
+  trackingNumber  String?
+  status          String    @default("pending") // pending, processing, picked, shipped, delivered, failed
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([warehouseId])
+  @@index([status])
+}
+
+model InventoryMovement {
+  id           String   @id @default(uuid())
+  productId    String
+  warehouseId  String?
+  orderId      String?
+  movementType String
+  quantity     Int
+  reason       String?
+  source       String?
+  createdAt    DateTime @default(now())
+
+  @@index([productId, createdAt])
+  @@index([warehouseId, createdAt])
+  @@index([orderId])
+
+}
+
+model PromotionAudit {
+  id          String   @id @default(uuid())
+  promotionId String
+  orderId     String
+  userId      String?
+  amount      Int      @default(0)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@index([promotionId])
+  @@index([orderId])
+}
+
+
+model SalesSnapshotDaily {
+  id            String   @id @default(uuid())
+  snapshotDate  DateTime @unique
+  metricMode    String
+  orderCount    Int      @default(0)
+  revenue       Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([metricMode, snapshotDate])
+}
+
+model InventorySnapshotDaily {
+  id               String   @id @default(uuid())
+  snapshotDate     DateTime
+  productId        String
+  warehouseId      String?
+  stockOnHand      Int      @default(0)
+  reserved         Int      @default(0)
+  minStockThreshold Int     @default(5)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([snapshotDate, productId, warehouseId])
+  @@index([snapshotDate])
+  @@index([productId, snapshotDate])
+}
+

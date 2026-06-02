@@ -14,7 +14,7 @@ import { products as fallbackProducts, categories, formatPrice } from "@/data/mo
 import ProductCard from "@/components/ProductCard";
 import { ProductGridSkeleton } from "@/components/Skeleton";
 import { Product } from "@/types/product";
-import { fetchProducts } from "@/services/catalogApi";
+import { searchProducts } from "@/services/adminApi";
 import { Slider } from "@/components/ui/slider";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
@@ -259,6 +259,8 @@ const ProductListing = () => {
   const [sortBy, setSortBy] = useState("default");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
+  const [totalHits, setTotalHits] = useState(0);
+  const [brandFacetCounts, setBrandFacetCounts] = useState<Map<string, number>>(new Map());
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -297,21 +299,46 @@ const ProductListing = () => {
       setApiError(null);
 
       try {
-        const data = await fetchProducts({
+        const data = await searchProducts({
           q: query,
           category: categorySlug,
-          page: 1,
-          pageSize: 100,
+          brands: selectedBrands.length > 0 ? selectedBrands : undefined,
+          minPrice: priceRange[0] !== DEFAULT_MIN_PRICE ? priceRange[0] : undefined,
+          maxPrice: priceRange[1] !== DEFAULT_MAX_PRICE ? priceRange[1] : undefined,
+          minRating: minRating > 0 ? minRating : undefined,
+          sortBy: sortBy === "default" ? "newest" : (sortBy as 'newest' | 'price-low' | 'price-high' | 'rating-high' | 'popular'),
+          page: currentPage,
+          pageSize: PRODUCTS_PER_PAGE,
+          facets: true,
         });
 
         if (isMounted) {
-          setApiProducts(data.items);
+          setApiProducts(
+            data.hits.map((hit) => ({
+              id: hit.id,
+              name: hit.name,
+              slug: hit.slug,
+              price: hit.price,
+              originalPrice: hit.originalPrice,
+              discount: hit.discount,
+              images: hit.images || [],
+              category: hit.category,
+              brand: hit.brand,
+              rating: hit.rating,
+              reviewCount: hit.reviewCount,
+              inStock: hit.inStock,
+            }))
+          );
+          setTotalHits(data.totalHits);
+          setBrandFacetCounts(new Map((data.facets?.brands || []).map((entry) => [entry.name, entry.count])));
         }
       } catch (err) {
         if (isMounted) {
           console.error("Failed to load products:", err);
           setApiError("Không kết nối được API. Đang hiển thị dữ liệu mẫu.");
           setApiProducts(fallbackProducts);
+          setTotalHits(fallbackProducts.length);
+          setBrandFacetCounts(new Map());
         }
       } finally {
         if (isMounted) {
@@ -325,64 +352,19 @@ const ProductListing = () => {
     return () => {
       isMounted = false;
     };
-  }, [categorySlug, query]);
-
-  const baseProducts = useMemo(() => {
-    let result = [...apiProducts];
-    if (categorySlug) result = result.filter((p) => p.category === categorySlug);
-    if (query) result = result.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
-    return result;
-  }, [apiProducts, categorySlug, query]);
+  }, [categorySlug, currentPage, minRating, priceRange, query, selectedBrands, sortBy]);
 
   const availableBrands = useMemo(() => {
-    return Array.from(new Set(baseProducts.map((product) => product.brand).filter(Boolean))).sort((a, b) =>
+    const fromFacets = Array.from(brandFacetCounts.keys()).sort((a, b) => a.localeCompare(b, "vi"));
+    if (fromFacets.length > 0) {
+      return fromFacets;
+    }
+    return Array.from(new Set(apiProducts.map((product) => product.brand).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b, "vi"),
     );
-  }, [baseProducts]);
+  }, [apiProducts, brandFacetCounts]);
 
-  const brandCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const product of baseProducts) {
-      const next = (counts.get(product.brand) || 0) + 1;
-      counts.set(product.brand, next);
-    }
-    return counts;
-  }, [baseProducts]);
-
-  const filteredProducts = useMemo(() => {
-    let result = [...baseProducts];
-
-    result = result.filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
-
-    if (selectedBrands.length > 0) {
-      result = result.filter((p) => selectedBrands.includes(p.brand));
-    }
-
-    if (minRating > 0) {
-      result = result.filter((p) => p.rating >= minRating);
-    }
-
-    switch (sortBy) {
-      case "price-asc":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "price-desc":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case "bestseller":
-        result.sort((a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0));
-        break;
-      default:
-        break;
-    }
-
-    return result;
-  }, [baseProducts, priceRange, selectedBrands, minRating, sortBy]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(totalHits / PRODUCTS_PER_PAGE));
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -390,7 +372,7 @@ const ProductListing = () => {
     }
   }, [currentPage, totalPages]);
 
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * PRODUCTS_PER_PAGE, currentPage * PRODUCTS_PER_PAGE);
+  const paginatedProducts = apiProducts;
   const currentCategory = categories.find((c) => c.slug === categorySlug);
   const paginationItems = buildCompactPagination(currentPage, totalPages);
 
@@ -544,7 +526,7 @@ const ProductListing = () => {
             <FilterSidebar
               state={{ priceRange, selectedBrands, minRating, sortBy }}
               availableBrands={availableBrands}
-              brandCounts={brandCounts}
+              brandCounts={brandFacetCounts}
               onPriceRangeChange={(range) => {
                 setPriceRange(range);
                 setCurrentPage(1);
@@ -583,7 +565,7 @@ const ProductListing = () => {
                     </span>
                   )}
                 </button>
-                <span className="text-sm text-muted-foreground">{filteredProducts.length} sản phẩm</span>
+                <span className="text-sm text-muted-foreground">{totalHits} sản phẩm</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -657,7 +639,7 @@ const ProductListing = () => {
 
               <div className="overflow-y-auto px-4 pb-2">
                 <div className="mb-3 rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-                  Kết quả tạm tính: {filteredProducts.length} sản phẩm
+                  Kết quả tạm tính: {totalHits} sản phẩm
                 </div>
                 <div className="mb-4 rounded-lg border border-border/60 p-3">
                   <label className="mb-1 block text-xs font-semibold text-muted-foreground">Sắp xếp</label>
@@ -677,7 +659,7 @@ const ProductListing = () => {
                 <FilterSidebar
                   state={draftFilters}
                   availableBrands={availableBrands}
-                  brandCounts={brandCounts}
+                  brandCounts={brandFacetCounts}
                   onPriceRangeChange={(range) => setDraftFilters((prev) => ({ ...prev, priceRange: range }))}
                   onToggleBrand={(brand) => {
                     setDraftFilters((prev) => ({
@@ -733,7 +715,7 @@ const ProductListing = () => {
             </div>
           )}
 
-          {filteredProducts.length === 0 && !isLoadingProducts && (
+          {totalHits === 0 && !isLoadingProducts && (
             <div className="py-16 text-center">
               <p className="text-lg text-muted-foreground">Không tìm thấy sản phẩm phù hợp.</p>
               <Link to="/products" className="mt-2 inline-block font-medium text-primary hover:underline">

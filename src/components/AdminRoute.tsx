@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { ReactElement } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasAdminWorkspaceAccess } from '@/lib/adminRoles';
 
 export default function AdminRoute({ children }: { children: ReactElement }) {
   const { user, isLoading } = useAuth();
@@ -14,7 +15,7 @@ export default function AdminRoute({ children }: { children: ReactElement }) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (user.role !== 'admin') {
+  if (!hasAdminWorkspaceAccess(user.role)) {
     return <Navigate to="/profile" replace />;
   }
 

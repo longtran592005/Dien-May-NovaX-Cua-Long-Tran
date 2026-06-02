@@ -41,6 +41,20 @@ function normalizeUrl(envUrl: string | undefined, defaultUrl: string): string {
 
 const emailServiceUrl = normalizeUrl(process.env.EMAIL_SERVICE_URL, 'http://localhost:4070');
 
+type UserRole = 'customer' | 'admin' | 'manager' | 'sales' | 'warehouse' | 'staff';
+type InternalUserRole = Exclude<UserRole, 'customer'>;
+
+const INTERNAL_USER_ROLES: InternalUserRole[] = ['admin', 'manager', 'sales', 'warehouse', 'staff'];
+
+type AdminManagedUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  role: string;
+  verified: boolean;
+  createdAt: Date;
+};
+
 interface AccessPayload {
   sub: string;
   email: string;
@@ -56,8 +70,8 @@ interface RefreshPayload {
 
 @Injectable()
 export class AuthService {
-  private readonly accessSecret = process.env.JWT_ACCESS_SECRET || 'novax_access_secret_dev';
-  private readonly refreshSecret = process.env.JWT_REFRESH_SECRET || 'novax_refresh_secret_dev';
+  private readonly accessSecret = this.requiredEnv('JWT_ACCESS_SECRET');
+  private readonly refreshSecret = this.requiredEnv('JWT_REFRESH_SECRET');
   private readonly accessTtlSeconds = this.parseDurationToSeconds(process.env.JWT_ACCESS_TTL || '15m');
   private readonly refreshTtlSeconds = this.parseDurationToSeconds(process.env.JWT_REFRESH_TTL || '30d');
   
@@ -66,7 +80,19 @@ export class AuthService {
   private readonly googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   constructor(private readonly prisma: PrismaService) {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.warn('GOOGLE_CLIENT_ID is not configured; Google login will be unavailable.');
+    }
     this.redis = new MockRedis();
+  }
+
+  private requiredEnv(name: string) {
+    const value = process.env[name]?.trim();
+    if (!value) {
+      throw new Error(`${name} is required`);
+    }
+
+    return value;
   }
 
   /**
@@ -472,19 +498,94 @@ export class AuthService {
       }
     });
 
-    return users.map((user) => ({
-      id: user.id,
-      email: user.email,
-      name: user.fullName || '',
-      role: user.role as 'customer' | 'admin',
-      verified: user.verified,
-      createdAt: user.createdAt
-    }));
+    return users.map((user) => this.mapAdminManagedUser(user));
   }
 
-  async updateUserRole(id: string, role: 'customer' | 'admin') {
-    if (role !== 'customer' && role !== 'admin') {
+  async listStaff() {
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: INTERNAL_USER_ROLES } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        verified: true,
+        createdAt: true
+      }
+    });
+
+    return users.map((user) => this.mapAdminManagedUser(user));
+  }
+
+  async createStaff(email: string, password: string, fullName: string, role: InternalUserRole = 'staff') {
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedName = fullName.trim();
+
+    if (!normalizedName) {
+      throw new BadRequestException('Full name is required');
+    }
+
+    if (password.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      throw new BadRequestException('Email already exists');
+    }
+
+    if (!INTERNAL_USER_ROLES.includes(role)) {
       throw new BadRequestException('Invalid role');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const created = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        fullName: normalizedName,
+        passwordHash,
+        role,
+        verified: true,
+        carts: {
+          create: {}
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        verified: true,
+        createdAt: true
+      }
+    });
+
+    return this.mapAdminManagedUser(created);
+  }
+
+  async updateUserRole(id: string, role: UserRole) {
+    if (!['customer', ...INTERNAL_USER_ROLES].includes(role)) {
+      throw new BadRequestException('Invalid role');
+    }
+
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true }
+    });
+
+    if (!currentUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    if (currentUser.role === 'admin' && role !== 'admin') {
+      const adminCount = await this.prisma.user.count({
+        where: { role: 'admin' }
+      });
+
+      if (adminCount <= 1) {
+        throw new BadRequestException('Cannot remove the last admin account');
+      }
     }
 
     const updated = await this.prisma.user.update({
@@ -500,14 +601,7 @@ export class AuthService {
       }
     });
 
-    return {
-      id: updated.id,
-      email: updated.email,
-      name: updated.fullName || '',
-      role: updated.role,
-      verified: updated.verified,
-      createdAt: updated.createdAt
-    };
+    return this.mapAdminManagedUser(updated);
   }
 
   async updateUserVerified(id: string, verified: boolean) {
@@ -531,14 +625,20 @@ export class AuthService {
       await this.prisma.refreshToken.deleteMany({ where: { userId: id } });
     }
 
-    return {
-      id: updated.id,
-      email: updated.email,
-      name: updated.fullName || '',
-      role: updated.role,
-      verified: updated.verified,
-      createdAt: updated.createdAt
-    };
+    return this.mapAdminManagedUser(updated);
+  }
+
+  async updateStaffVerified(id: string, verified: boolean) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true }
+    });
+
+    if (!user || !INTERNAL_USER_ROLES.includes(user.role as InternalUserRole)) {
+      throw new BadRequestException('Staff account not found');
+    }
+
+    return this.updateUserVerified(id, verified);
   }
 
   /**
@@ -706,6 +806,23 @@ export class AuthService {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.warn(`Email sending failed: ${errorMsg} (to: ${payload.to})`);
     }
+  }
+
+  private mapAdminManagedUser(user: AdminManagedUser) {
+    const normalizedRole: UserRole = user.role === 'staff'
+      ? 'staff'
+      : (['customer', 'admin', 'manager', 'sales', 'warehouse'].includes(user.role)
+        ? user.role as UserRole
+        : 'customer');
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.fullName || '',
+      role: normalizedRole,
+      verified: user.verified,
+      createdAt: user.createdAt
+    };
   }
 }
 

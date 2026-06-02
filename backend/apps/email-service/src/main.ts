@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = Number(process.env.PORT || '4070');
+  const port = Number(process.env.EMAIL_SERVICE_PORT || '4080');
   await app.listen(port);
   console.log('email-service listening on port ' + port);
 }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Package, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice, categories } from '@/data/mockData';
 import {
@@ -65,6 +67,8 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
+  const availableCount = products.filter((product) => product.inStock).length;
+  const unavailableCount = products.length - availableCount;
 
   const loadProducts = async () => {
     setLoading(true);
@@ -159,16 +163,54 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h2 className="text-2xl font-black">Quản lý sản phẩm</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Thêm, sửa, ẩn sản phẩm ngay trên admin.</p>
-      </div>
+      <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="p-6 lg:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground">Kho hàng</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Quản lý sản phẩm</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Thêm, sửa và ẩn sản phẩm trong một không gian tập trung vào tồn kho, SKU và thao tác nhanh.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button onClick={() => void loadProducts()} className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5">
+                <RefreshCw className="h-4 w-4" />
+                Làm mới
+              </button>
+              <Link to="/admin/orders" className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary">
+                Xem đơn liên quan
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="border-t border-border/70 bg-gradient-to-br from-slate-950 to-slate-900 p-6 text-slate-50 lg:border-l lg:border-t-0 lg:p-8">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-slate-300" />
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">Tổng quan kho</p>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Tổng sản phẩm</p>
+                <p className="mt-2 text-2xl font-black text-white">{products.length}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Còn hàng</p>
+                <p className="mt-2 text-2xl font-black text-white">{availableCount}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Hết hàng</p>
+                <p className="mt-2 text-2xl font-black text-white">{unavailableCount}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_1fr]">
-        <div className="rounded-3xl border border-border bg-card p-5">
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="font-bold">Danh sách sản phẩm</h3>
-            <button onClick={() => void loadProducts()} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary">
+            <button onClick={() => void loadProducts()} className="rounded-full border border-border bg-background px-3 py-2 text-sm font-medium transition hover:bg-secondary">
               Làm mới
             </button>
           </div>
@@ -178,7 +220,7 @@ export default function ProductsPage() {
           ) : (
             <div className="mt-4 space-y-3">
               {products.map((product) => (
-                <div key={product.id} className="rounded-2xl border border-border p-4">
+                <div key={product.id} className="rounded-2xl border border-border p-4 transition hover:bg-secondary/30">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold">{product.name}</p>
@@ -187,10 +229,10 @@ export default function ProductsPage() {
                       <p className="text-xs text-muted-foreground">Tồn kho: {product.inStock ? 'Còn hàng' : 'Hết hàng'}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditingId(product.id)} className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary">
+                      <button onClick={() => setEditingId(product.id)} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition hover:bg-secondary">
                         Sửa
                       </button>
-                      <button onClick={() => void handleDelete(product.id)} className="rounded-lg border border-sale/40 px-3 py-1.5 text-sm text-sale hover:bg-sale/10">
+                      <button onClick={() => void handleDelete(product.id)} className="rounded-lg border border-sale/40 px-3 py-1.5 text-sm text-sale transition hover:bg-sale/10">
                         Ẩn
                       </button>
                     </div>
@@ -201,7 +243,7 @@ export default function ProductsPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-5">
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="font-bold">{editingId ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}</h3>
             {editingId && (

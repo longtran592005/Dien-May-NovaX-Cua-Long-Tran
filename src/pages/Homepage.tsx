@@ -1,32 +1,52 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Trash2, ArrowRight, ChevronRight, Truck, RefreshCcw, ShieldCheck, CreditCard, Flame } from "lucide-react";
-import { categories, formatPrice, products as mockProducts } from "@/data/mockData";
+import { categories, products as mockProducts } from "@/data/mockData";
 import ProductCard from "@/components/ProductCard";
 import RecommendationSection from "@/components/RecommendationSection";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { fetchProducts } from "@/services/catalogApi";
+import { fetchActivePromotionsForCustomer, type ActivePromotion } from "@/services/adminApi";
 import { Product } from "@/types/product";
 import heroBanner from "@/assets/hero-banner.jpg";
 import banner2 from "@/assets/banner-2.jpg";
 
 // Flash sale countdown
-const FlashSaleTimer = () => {
-  const [time, setTime] = useState({ hours: 5, minutes: 23, seconds: 45 });
+const FlashSaleTimer = ({ endsAt }: { endsAt?: string }) => {
+  const [time, setTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [isExpired, setIsExpired] = useState(false);
+
   useEffect(() => {
+    if (!endsAt) return;
+    
+    const target = new Date(endsAt).getTime();
+    
     const timer = setInterval(() => {
-      setTime(prev => {
-        let { hours, minutes, seconds } = prev;
-        seconds--;
-        if (seconds < 0) { seconds = 59; minutes--; }
-        if (minutes < 0) { minutes = 59; hours--; }
-        if (hours < 0) { hours = 23; minutes = 59; seconds = 59; }
-        return { hours, minutes, seconds };
-      });
+      const now = new Date().getTime();
+      const diff = target - now;
+      
+      if (diff <= 0) {
+        clearInterval(timer);
+        setTime({ hours: 0, minutes: 0, seconds: 0 });
+        setIsExpired(true);
+        return;
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTime({ hours, minutes, seconds });
     }, 1000);
+    
     return () => clearInterval(timer);
-  }, []);
+  }, [endsAt]);
+
   const pad = (n: number) => n.toString().padStart(2, "0");
+  
+  if (!endsAt) return <span className="text-sm font-medium">Đang cập nhật...</span>;
+  if (isExpired) return <span className="text-sm font-medium">Đã kết thúc</span>;
+
   return (
     <div className="flex gap-1 items-center">
       {[pad(time.hours), pad(time.minutes), pad(time.seconds)].map((v, i) => (
@@ -42,15 +62,27 @@ const FlashSaleTimer = () => {
 const Homepage = () => {
   const { items: recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
   const [products, setProducts] = useState<Product[]>([]);
+  const [activePromos, setActivePromos] = useState<ActivePromotion[]>([]);
 
   useEffect(() => {
-    void fetchProducts({ page: 1, pageSize: 200 })
+    void fetchProducts({ page: 1, pageSize: 60 })
       .then(res => setProducts(res.items))
       .catch(() => {
         // Fallback to mock data when API is not available
         setProducts(mockProducts);
       });
+      
+    void fetchActivePromotionsForCustomer()
+      .then(res => setActivePromos(res))
+      .catch(() => {
+        console.warn('Failed to fetch promotions');
+      });
   }, []);
+
+  // Find the most relevant flash sale promotion (type = product or bogo, ends soonest)
+  const flashSalePromo = activePromos
+    .filter(p => p.type === 'product' || p.type === 'bogo')
+    .sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime())[0];
 
   const flashSaleProducts = products.filter(p => p.discount && p.discount >= 20);
   const bestSellers = products.filter(p => p.isBestSeller);
@@ -74,7 +106,7 @@ const Homepage = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 z-10">
-                <span className="badge-new mb-3">Siêu Ưu Đãi Tháng 4</span>
+                <span className="badge-new mb-3">Siêu Ưu Đãi Tháng</span>
                 <h1 className="text-white text-3xl md:text-5xl font-extrabold mb-3 leading-tight text-gradient from-white to-white/70">
                   Đại Tiệc Công Nghệ
                 </h1>
@@ -148,12 +180,16 @@ const Homepage = () => {
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <h2 className="section-title">
                   <Flame className="w-8 h-8 text-sale animate-pulse" />
-                  <span className="text-gradient from-sale to-pink-500">Giờ Vàng Giá Sốc</span>
+                  <span className="text-gradient from-sale to-pink-500">
+                    {flashSalePromo ? flashSalePromo.name : 'Giờ Vàng Giá Sốc'}
+                  </span>
                 </h2>
                 <div className="flex items-center gap-3 bg-sale/10 px-4 py-2 rounded-xl">
                   <Clock className="w-5 h-5 text-sale" />
                   <span className="text-sale font-bold text-sm">Kết thúc trong:</span>
-                  <div className="scale-90 origin-left"><FlashSaleTimer /></div>
+                  <div className="scale-90 origin-left">
+                    <FlashSaleTimer endsAt={flashSalePromo?.endsAt} />
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

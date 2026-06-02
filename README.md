@@ -86,8 +86,9 @@ Gateway chay tai cong `8080`.
 ```bash
 cd backend
 npm install
+npm run db:check:postgres-env
 npm run prisma:generate
-npm run prisma:migrate
+npm run prisma:migrate:pg
 npm run prisma:seed
 ```
 

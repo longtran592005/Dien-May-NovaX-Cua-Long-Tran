@@ -17,6 +17,14 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = "novax-cart";
 
+const getAvailableStock = (product: Product) => {
+  if (typeof product.stock === "number") {
+    return Math.max(0, product.stock);
+  }
+
+  return product.inStock ? Number.MAX_SAFE_INTEGER : 0;
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
@@ -83,11 +91,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const addToCart = useCallback((product: Product) => {
+    const availableStock = getAvailableStock(product);
+    if (!product.inStock || availableStock <= 0) {
+      toast.error("Sản phẩm đang hết hàng, bạn chỉ có thể xem");
+      return;
+    }
+
     setItems((prev) => {
       const existing = prev.find(item => item.product.id === product.id);
       let nextItems: CartItem[];
 
       if (existing) {
+        if (existing.quantity >= availableStock) {
+          toast.error(`Tối đa còn ${availableStock} sản phẩm trong kho`);
+          return prev;
+        }
+
         toast.success(`Đã tăng số lượng ${product.name}`);
         nextItems = prev.map(item =>
           item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
@@ -118,7 +137,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (quantity <= 0) {
         nextItems = prev.filter((item) => item.product.id !== productId);
       } else {
-        nextItems = prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item));
+        nextItems = prev.map((item) => {
+          if (item.product.id !== productId) {
+            return item;
+          }
+
+          const availableStock = getAvailableStock(item.product);
+          if (availableStock <= 0) {
+            toast.error("Sản phẩm này đã hết hàng");
+            return { ...item, quantity: 1 };
+          }
+
+          if (quantity > availableStock) {
+            toast.error(`Tối đa còn ${availableStock} sản phẩm trong kho`);
+            return { ...item, quantity: availableStock };
+          }
+
+          return { ...item, quantity };
+        });
       }
 
       void syncRemoteCart(nextItems);
