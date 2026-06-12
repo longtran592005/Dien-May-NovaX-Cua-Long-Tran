@@ -139,7 +139,7 @@ const ProductDetail = () => {
 
   const wishlisted = isInWishlist(product.id);
   const compared = isInComparison(product.id);
-  const availableStock = typeof product.stock === "number" ? Math.max(0, product.stock) : (product.inStock ? 999 : 0);
+  const availableStock = typeof product.stock === "number" ? Math.max(0, product.stock) : 0;
   const isPurchasable = product.inStock && availableStock > 0;
   const maxSelectableQuantity = Math.max(1, Math.min(availableStock, 10));
   const similarProducts = allProducts.filter(p => p.category === product.category && p.id !== product.id);
@@ -318,8 +318,15 @@ const ProductDetail = () => {
                   <span className="w-10 text-center font-black text-lg">{quantity}</span>
                   <button disabled={!isPurchasable} onClick={() => setQuantity(Math.min(maxSelectableQuantity, quantity + 1))} className="p-3 hover:bg-white/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><Plus className="w-4 h-4" /></button>
                 </div>
-                {isPurchasable && availableStock <= 10 && (
-                  <span className="text-xs font-bold text-sale">Còn {availableStock} sản phẩm</span>
+                {isPurchasable && (
+                  <div className="flex flex-col ml-4">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Kho hàng</span>
+                    {availableStock > 10 ? (
+                      <span className="text-sm font-black text-success flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Sẵn {availableStock} sản phẩm</span>
+                    ) : (
+                      <span className="text-sm font-black text-sale flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> Chỉ còn {availableStock} chiếc</span>
+                    )}
+                  </div>
                 )}
               </div>
 

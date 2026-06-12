@@ -24,8 +24,8 @@ export default function AdminLayout() {
               title: 'Vận hành',
               items: [
                 { to: '/admin/orders', label: 'Đơn hàng', icon: ShoppingCart },
-                { to: '/admin/products', label: 'Sản phẩm', icon: Boxes },
-                { to: '/admin/inventory', label: 'Tồn kho', icon: Warehouse },
+                { to: '/admin/products', label: 'Hàng hóa', icon: Boxes },
+                { to: '/admin/inventory', label: 'Vận chuyển', icon: Warehouse },
                 { to: '/admin/promotions', label: 'Khuyến mãi', icon: Tags },
                 { to: '/admin/customers', label: 'Khách hàng', icon: Users }
               ]
@@ -33,9 +33,9 @@ export default function AdminLayout() {
             {
               title: 'Quản trị',
               items: [
-                { to: '/admin/reporting', label: 'Báo cáo', icon: BarChart3 },
+                { to: '/admin/reporting', label: 'Quản trị', icon: BarChart3 },
                 { to: '/admin/orders-audit', label: 'Audit', icon: Tags },
-                ...(isAdmin ? [{ to: '/admin/staff', label: 'Nhân sự', icon: Warehouse }] : [])
+                ...(isAdmin ? [{ to: '/admin/staff', label: 'Quản lý kho', icon: Warehouse }] : [])
               ]
             }
           ]

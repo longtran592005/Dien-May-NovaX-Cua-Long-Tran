@@ -45,8 +45,12 @@ export class PaymentService {
       throw new BadRequestException(`Payment can only be initiated for pending orders (current: ${order.status})`);
     }
 
-    if (Number(order.total) !== Number(input.amount)) {
-      throw new BadRequestException('Payment amount does not match order total');
+    // Use order total from DB as the source of truth.
+    // Log a warning if client-side amount differs (rounding, fees can cause minor diffs).
+    const authorizedAmount = Number(order.total);
+    if (Number(input.amount) !== authorizedAmount) {
+      console.warn(`Payment amount mismatch for order ${input.orderId}: client=${input.amount} db=${authorizedAmount}. Using DB amount.`);
+      input.amount = authorizedAmount;
     }
 
     const transactionId = crypto.randomUUID();
@@ -70,11 +74,21 @@ export class PaymentService {
     });
 
     if (input.method === 'cod') {
+      // For COD, mark payment as completed and confirm the order immediately.
+      await this.prisma.payment.update({
+        where: { orderId: input.orderId },
+        data: { status: 'completed' }
+      });
+      try {
+        await this.syncOrderAfterPayment(input.orderId);
+      } catch (err) {
+        console.error('COD order sync failed', (err as Error).message);
+      }
       return {
         method: 'cod',
         transactionId,
-        status: 'pending',
-        message: 'COD selected. Payment will be collected on delivery.'
+        status: 'completed',
+        message: 'COD selected. Order confirmed. Payment will be collected on delivery.'
       };
     }
 

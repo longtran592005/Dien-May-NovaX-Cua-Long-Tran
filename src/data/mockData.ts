@@ -90,6 +90,7 @@ const baseProducts: Product[] = [
     rating: 4.9,
     reviewCount: 428,
     inStock: true,
+    stock: 7,
     isBestSeller: true,
     specs: { "Màn hình": "6.7 inch", "Bộ nhớ": "256GB", "Chip": "A17 Pro" },
     description: "Flagship iPhone cao cấp với camera zoom quang 5x và hiệu năng mạnh mẽ."
@@ -108,6 +109,7 @@ const baseProducts: Product[] = [
     rating: 4.8,
     reviewCount: 397,
     inStock: true,
+    stock: 46,
     isBestSeller: true,
     specs: { "Màn hình": "6.8 inch", "Bộ nhớ": "256GB", "Bút": "S Pen" },
     description: "Galaxy S24 Ultra nổi bật với camera 200MP và AI hỗ trợ tiếng Việt tốt."
@@ -126,6 +128,7 @@ const baseProducts: Product[] = [
     rating: 4.9,
     reviewCount: 311,
     inStock: true,
+    stock: 24,
     isNew: true,
     specs: { "CPU": "Apple M2", "RAM": "8GB", "SSD": "256GB" },
     description: "Laptop mỏng nhẹ, pin lâu và màn hình lớn phù hợp học tập lẫn làm việc."
@@ -144,6 +147,7 @@ const baseProducts: Product[] = [
     rating: 4.7,
     reviewCount: 256,
     inStock: true,
+    stock: 2,
     isBestSeller: true,
     specs: { "Kích thước": "65 inch", "Độ phân giải": "4K", "Tần số quét": "120Hz" },
     description: "Tivi QLED 4K hiển thị rực rỡ, phù hợp phòng khách lớn."
@@ -162,6 +166,7 @@ const baseProducts: Product[] = [
     rating: 4.6,
     reviewCount: 218,
     inStock: true,
+    stock: 3,
     specs: { "Kích thước": "55 inch", "Độ phân giải": "4K", "Hệ điều hành": "webOS" },
     description: "Tivi LG 4K cân bằng giá và trải nghiệm xem phim tại gia."
   },
@@ -179,6 +184,7 @@ const baseProducts: Product[] = [
     rating: 4.7,
     reviewCount: 193,
     inStock: true,
+    stock: 9,
     specs: { "Dung tích": "382L", "Công nghệ": "Digital Inverter", "Ngăn đá": "Trên" },
     description: "Tủ lạnh dung tích lớn cho gia đình 4-5 người, vận hành êm và tiết kiệm điện."
   },
@@ -196,6 +202,7 @@ const baseProducts: Product[] = [
     rating: 4.5,
     reviewCount: 167,
     inStock: true,
+    stock: 42,
     specs: { "Dung tích": "189L", "Công nghệ": "Inverter", "Ngăn đá": "Trên" },
     description: "Tủ lạnh nhỏ gọn, phù hợp căn hộ hoặc gia đình ít người."
   },
@@ -213,6 +220,7 @@ const baseProducts: Product[] = [
     rating: 4.7,
     reviewCount: 212,
     inStock: true,
+    stock: 41,
     isBestSeller: true,
     specs: { "Công suất": "1 HP", "Công nghệ": "Inverter", "Gas": "R32" },
     description: "Làm lạnh nhanh, tiết kiệm điện và ổn định khi dùng lâu dài."
@@ -231,6 +239,7 @@ const baseProducts: Product[] = [
     rating: 4.8,
     reviewCount: 176,
     inStock: true,
+    stock: 21,
     specs: { "Công suất": "1 HP", "Lọc khí": "Nanoe", "Gas": "R32" },
     description: "Điều hòa Panasonic vận hành êm, lọc không khí tốt cho phòng ngủ."
   },
@@ -248,6 +257,7 @@ const baseProducts: Product[] = [
     rating: 4.8,
     reviewCount: 203,
     inStock: true,
+    stock: 49,
     isBestSeller: true,
     specs: { "Khối lượng giặt": "10kg", "Loại máy": "Cửa trước", "Công nghệ": "AI DD" },
     description: "Máy giặt cửa trước bền bỉ, giặt sạch và tiết kiệm điện nước."
@@ -266,6 +276,7 @@ const baseProducts: Product[] = [
     rating: 4.6,
     reviewCount: 159,
     inStock: true,
+    stock: 43,
     specs: { "Khối lượng giặt": "9kg", "Loại máy": "Cửa trước", "Công nghệ": "EcoInverter" },
     description: "Giặt hơi nước giúp giảm nhăn và phù hợp gia đình 3-4 người."
   },
@@ -283,6 +294,7 @@ const baseProducts: Product[] = [
     rating: 4.5,
     reviewCount: 244,
     inStock: true,
+    stock: 28,
     specs: { "Dung tích": "1.8L", "Điều khiển": "Điện tử", "Lòng nồi": "Chống dính" },
     description: "Nồi cơm điện tử đa chức năng, nấu ổn định và dễ vệ sinh."
   },
@@ -300,6 +312,7 @@ const baseProducts: Product[] = [
     rating: 4.4,
     reviewCount: 132,
     inStock: true,
+    stock: 29,
     specs: { "Dung tích": "20L", "Công suất": "700W", "Bảng điều khiển": "Núm xoay" },
     description: "Lò vi sóng nhỏ gọn, phù hợp hâm nóng và rã đông hàng ngày."
   },
@@ -317,6 +330,7 @@ const baseProducts: Product[] = [
     rating: 4.5,
     reviewCount: 176,
     inStock: true,
+    stock: 35,
     isNew: true,
     specs: { "Màn hình": "6.7 inch", "Bộ nhớ": "256GB", "Kết nối": "5G" },
     description: "Thiết kế mỏng nhẹ, camera chân dung đẹp và pin dùng ổn trong ngày."
@@ -335,6 +349,7 @@ const baseProducts: Product[] = [
     rating: 4.7,
     reviewCount: 201,
     inStock: true,
+    stock: 39,
     specs: { "Màn hình": "6.36 inch", "Bộ nhớ": "256GB", "Camera": "Leica" },
     description: "Flagship Android nhỏ gọn, hiệu năng cao và camera hợp tác Leica."
   },

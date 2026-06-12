@@ -119,26 +119,31 @@ export class OrderService {
           select: { stock: true }
         });
 
-        if (!product || product.stock < quantity) {
-          throw new BadRequestException(`Insufficient stock for product ${productId}`);
-        }
-
-        await tx.product.update({
-          where: { id: productId },
-          data: {
-            stock: {
-              decrement: quantity
-            },
-            inStock: product.stock - quantity > 0
+        // If product exists in DB, verify and decrement stock.
+        // If product is from fallback data (not in DB), skip stock check and continue.
+        if (product !== null) {
+          if (product.stock < quantity) {
+            throw new BadRequestException(`Insufficient stock for product ${productId}. Available: ${product.stock}, requested: ${quantity}`);
           }
-        });
 
-        movementEntries.push({
-          productId,
-          quantity,
-          movementType: 'sale-reserved',
-          reason: 'Stock reserved when creating order'
-        });
+          await tx.product.update({
+            where: { id: productId },
+            data: {
+              stock: {
+                decrement: quantity
+              },
+              inStock: product.stock - quantity > 0
+            }
+          });
+
+          movementEntries.push({
+            productId,
+            quantity,
+            movementType: 'sale-reserved',
+            reason: 'Stock reserved when creating order'
+          });
+        }
+        // else: fallback product not in DB — allow order without stock tracking
       }
 
       // Create order only after stock has been reserved.
@@ -497,12 +502,63 @@ export class OrderService {
       return null;
     }
 
+    // Try to find in DB by slug (in case it was seeded with a different ID)
     const bySlug = await this.prisma.product.findUnique({
       where: { slug: fallbackItem.slug },
       select: { id: true }
     });
 
-    return bySlug?.id ?? null;
+    if (bySlug) {
+      return bySlug.id;
+    }
+
+    // Product exists in fallback catalog but not in DB.
+    // Auto-seed it so FK constraints are satisfied and stock is trackable.
+    try {
+      // Ensure category exists
+      const categorySlug = fallbackItem.category;
+      const category = await this.prisma.category.upsert({
+        where: { slug: categorySlug },
+        update: {},
+        create: {
+          slug: categorySlug,
+          name: categorySlug.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+        }
+      });
+
+      const seeded = await this.prisma.product.create({
+        data: {
+          id: fallbackItem.id,
+          name: fallbackItem.name,
+          slug: fallbackItem.slug,
+          price: fallbackItem.price,
+          originalPrice: fallbackItem.originalPrice,
+          discount: fallbackItem.discount,
+          brand: fallbackItem.brand,
+          rating: fallbackItem.rating,
+          reviewCount: fallbackItem.reviewCount,
+          inStock: fallbackItem.inStock,
+          stock: (fallbackItem as any).stock ?? 50,
+          minStockThreshold: (fallbackItem as any).minStockThreshold ?? 5,
+          categoryId: category.id,
+          images: fallbackItem.images?.length
+            ? { create: fallbackItem.images.map((url: string, i: number) => ({ url, sortOrder: i })) }
+            : undefined
+        },
+        select: { id: true }
+      });
+
+      return seeded.id;
+    } catch (seedErr: any) {
+      // Concurrent requests may have already seeded this product
+      const existing = await this.prisma.product.findUnique({
+        where: { slug: fallbackItem.slug },
+        select: { id: true }
+      });
+      if (existing) return existing.id;
+      console.error('Failed to seed fallback product', fallbackItem.id, seedErr?.message);
+      return null;
+    }
   }
 
   private async resolveOrderUserId(requestedUserId?: string) {

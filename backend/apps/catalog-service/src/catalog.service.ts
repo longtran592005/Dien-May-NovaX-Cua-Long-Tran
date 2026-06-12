@@ -38,6 +38,7 @@ interface CatalogDbProduct {
   reviewCount: number;
   description: string | null;
   inStock: boolean;
+  stock: number;
 }
 
 @Injectable()
@@ -112,7 +113,8 @@ export class CatalogService {
           rating: item.rating,
           reviewCount: item.reviewCount,
           description: item.description || undefined,
-          inStock: item.inStock
+          inStock: item.inStock,
+          stock: item.stock
         })),
         page,
         pageSize,

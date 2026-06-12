@@ -99,7 +99,7 @@ export default function ProductsPage() {
       discount: String(editingProduct.discount || ''),
       brand: editingProduct.brand,
       sku: '',
-      stock: editingProduct.inStock ? '10' : '0',
+      stock: String(editingProduct.stock ?? 0),
       categorySlug: editingProduct.category,
       images: editingProduct.images?.join('\n') || ''
     });
@@ -226,7 +226,7 @@ export default function ProductsPage() {
                       <p className="font-semibold">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.brand} · {product.category}</p>
                       <p className="mt-1 text-sm font-bold text-primary">{formatPrice(product.price)}</p>
-                      <p className="text-xs text-muted-foreground">Tồn kho: {product.inStock ? 'Còn hàng' : 'Hết hàng'}</p>
+                      <p className="text-xs text-muted-foreground">Tồn kho: {product.stock ?? 0} chiếc</p>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => setEditingId(product.id)} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition hover:bg-secondary">

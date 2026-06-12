@@ -13,6 +13,8 @@ export interface CatalogProduct {
   reviewCount: number;
   description?: string;
   inStock: boolean;
+  stock: number;
+  minStockThreshold?: number;
   isNew?: boolean;
   isBestSeller?: boolean;
 }
@@ -32,6 +34,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.9,
     reviewCount: 428,
     inStock: true,
+    stock: 23,
+    minStockThreshold: 5,
     isBestSeller: true,
   },
   {
@@ -48,6 +52,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.8,
     reviewCount: 397,
     inStock: true,
+    stock: 31,
+    minStockThreshold: 5,
     isBestSeller: true,
   },
   {
@@ -64,6 +70,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.9,
     reviewCount: 311,
     inStock: true,
+    stock: 8,
+    minStockThreshold: 5,
     isNew: true,
   },
   {
@@ -80,6 +88,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.7,
     reviewCount: 256,
     inStock: true,
+    stock: 14,
+    minStockThreshold: 3,
     isBestSeller: true,
   },
   {
@@ -96,6 +106,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.6,
     reviewCount: 218,
     inStock: true,
+    stock: 3,
+    minStockThreshold: 3,
   },
   {
     id: 'p6',
@@ -111,6 +123,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.7,
     reviewCount: 193,
     inStock: true,
+    stock: 18,
+    minStockThreshold: 5,
   },
   {
     id: 'p7',
@@ -126,6 +140,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.5,
     reviewCount: 167,
     inStock: true,
+    stock: 27,
+    minStockThreshold: 5,
   },
   {
     id: 'p8',
@@ -141,6 +157,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.7,
     reviewCount: 212,
     inStock: true,
+    stock: 9,
+    minStockThreshold: 5,
     isBestSeller: true,
   },
   {
@@ -157,6 +175,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.8,
     reviewCount: 176,
     inStock: true,
+    stock: 0,
+    minStockThreshold: 5,
   },
   {
     id: 'p10',
@@ -172,6 +192,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.8,
     reviewCount: 203,
     inStock: true,
+    stock: 41,
+    minStockThreshold: 5,
     isBestSeller: true,
   },
   {
@@ -188,6 +210,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.6,
     reviewCount: 159,
     inStock: true,
+    stock: 4,
+    minStockThreshold: 5,
   },
   {
     id: 'p12',
@@ -203,6 +227,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.5,
     reviewCount: 244,
     inStock: true,
+    stock: 62,
+    minStockThreshold: 10,
   },
   {
     id: 'p13',
@@ -218,6 +244,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.4,
     reviewCount: 132,
     inStock: true,
+    stock: 35,
+    minStockThreshold: 10,
   },
   {
     id: 'p14',
@@ -233,6 +261,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.5,
     reviewCount: 176,
     inStock: true,
+    stock: 2,
+    minStockThreshold: 5,
     isNew: true,
   },
   {
@@ -249,6 +279,8 @@ const baseProducts: CatalogProduct[] = [
     rating: 4.7,
     reviewCount: 201,
     inStock: true,
+    stock: 16,
+    minStockThreshold: 5,
   },
 ];
 

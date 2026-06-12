@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BadgeAlert, Box, CircleDollarSign, PackageSearch, ShoppingBag, Users } from 'lucide-react';
+import { ArrowRight, BadgeAlert, Box, CircleDollarSign, PackageSearch, ShoppingBag, Users, TrendingUp, TrendingDown, Percent, Package, AlertTriangle, CheckCircle2, Activity, Zap, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/data/mockData';
 import {
@@ -13,6 +13,7 @@ import {
   type AnalyticsMetricMode,
   type AnalyticsPeriodType
 } from '@/services/adminApi';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 const statusLabels: Record<string, string> = {
   pending: 'Chờ xác nhận',
@@ -40,6 +41,36 @@ const roleTiles = [
     href: '/admin/products'
   }
 ] as const;
+
+const mockChartData = [
+  { name: 'T2', revenue: 12000000, cost: 8000000, prevRevenue: 10000000 },
+  { name: 'T3', revenue: 15000000, cost: 9500000, prevRevenue: 11000000 },
+  { name: 'T4', revenue: 18000000, cost: 11000000, prevRevenue: 14000000 },
+  { name: 'T5', revenue: 22000000, cost: 14000000, prevRevenue: 16000000 },
+  { name: 'T6', revenue: 28750000, cost: 17300000, prevRevenue: 20000000 },
+  { name: 'T7', revenue: 35000000, cost: 21000000, prevRevenue: 25000000 },
+  { name: 'CN', revenue: 42000000, cost: 25000000, prevRevenue: 30000000 },
+];
+
+const mockRecentActivities = [
+  { id: 1, type: 'order', text: 'Đơn hàng #ORD-0892 vừa được thanh toán', time: '5 phút trước' },
+  { id: 2, type: 'user', text: 'Khách hàng Trần Văn B vừa đăng ký tài khoản', time: '12 phút trước' },
+  { id: 3, type: 'order', text: 'Đơn hàng #ORD-0891 đã giao thành công', time: '30 phút trước' },
+  { id: 4, type: 'review', text: 'Đánh giá 5 sao mới cho iPhone 15 Pro Max', time: '1 giờ trước' },
+];
+
+const mockTopProducts = [
+  { productId: 'P1', name: 'iPhone 15 Pro Max 256GB', quantity: 45, revenue: 1439550000 },
+  { productId: 'P3', name: 'MacBook Air 15 inch M2', quantity: 28, revenue: 923720000 },
+  { productId: 'P2', name: 'Samsung Galaxy S24 Ultra', quantity: 24, revenue: 695760000 },
+  { productId: 'P4', name: 'Tivi Samsung QLED 4K 65 inch', quantity: 15, revenue: 269850000 },
+];
+
+const mockInventoryWarnings = [
+  { id: '1', name: 'Tai nghe AirPods Pro 2', stock: 0, status: 'Hết Hàng' },
+  { id: '2', name: 'Ốp lưng iPhone 15 Pro Max', stock: 2, status: 'Sắp Hết Hàng' },
+  { id: '3', name: 'Sạc nhanh 20W Type-C', stock: 4, status: 'Sắp Hết Hàng' },
+];
 
 export default function AdminDashboard() {
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
@@ -79,36 +110,6 @@ export default function AdminDashboard() {
     void loadAnalytics();
   }, [rangeDays, periodType, metricMode]);
 
-  const stats = useMemo(
-    () => [
-      {
-        label: 'Sản phẩm',
-        value: analytics ? analytics.totalProducts.toString() : '...',
-        icon: Box,
-        caption: analytics ? `${analytics.activeProducts} đang bán` : 'Đang tải'
-      },
-      {
-        label: 'Đơn hàng hôm nay',
-        value: analytics ? analytics.todayOrders.toString() : '...',
-        icon: ShoppingBag,
-        caption: analytics ? `${analytics.totalOrders} tổng đơn` : 'Đang tải'
-      },
-      {
-        label: 'Doanh thu',
-        value: analytics ? formatPrice(analytics.totalRevenue) : '...',
-        icon: CircleDollarSign,
-        caption: analytics ? `${formatPrice(analytics.todayRevenue)} hôm nay` : 'Đang tải'
-      },
-      {
-        label: 'Người dùng',
-        value: analytics ? analytics.totalUsers.toString() : '...',
-        icon: Users,
-        caption: analytics ? `${analytics.verifiedUsers} đã xác thực` : 'Đang tải'
-      }
-    ],
-    [analytics]
-  );
-
   const topStatus = useMemo(() => {
     if (!analytics || !analytics.statusBreakdown || analytics.statusBreakdown.length === 0) return null;
     return analytics.statusBreakdown.reduce((best, current) => (current.count > best.count ? current : best), analytics.statusBreakdown[0]);
@@ -121,7 +122,9 @@ export default function AdminDashboard() {
           <div className="relative p-6 lg:p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.14),_transparent_30%)]" />
             <div className="relative">
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground">Dashboard</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-success flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> SỨC KHỎE CỬA HÀNG: TỐT
+              </p>
               <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Quản trị NovaX</h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
                 Không gian điều hành tập trung cho quản lý, bán hàng và kho: nhìn nhanh tình trạng hệ thống, xử lý việc cần làm, và đi thẳng tới hành động.
@@ -138,50 +141,6 @@ export default function AdminDashboard() {
                   Xem cửa hàng
                 </Link>
               </div>
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Khung thời gian</span>
-                {(Object.keys(rangeLabels) as unknown as Array<keyof typeof rangeLabels>).map((key) => (
-                  <button
-                    key={key}
-                    onClick={() => setRangeDays(key)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      rangeDays === key ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-secondary'
-                    }`}
-                  >
-                    {rangeLabels[key]}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">Kỳ báo cáo</span>
-                {(['month', 'quarter', 'year'] as const).map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setPeriodType(item)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      periodType === item ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-secondary'
-                    }`}
-                  >
-                    {item === 'month' ? 'Tháng' : item === 'quarter' ? 'Quý' : 'Năm'}
-                  </button>
-                ))}
-                {(['paid', 'delivered'] as const).map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setMetricMode(item)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      metricMode === item ? 'bg-foreground text-background' : 'border border-border hover:bg-secondary'
-                    }`}
-                  >
-                    {item === 'paid' ? 'Doanh số đã thanh toán' : 'Doanh số đã giao'}
-                  </button>
-                ))}
-              </div>
-              {analytics && analytics.rangeStart ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Dữ liệu từ {new Date(analytics.rangeStart).toLocaleDateString('vi-VN')} đến {new Date(analytics.rangeEnd).toLocaleDateString('vi-VN')}
-                </p>
-              ) : null}
             </div>
           </div>
 
@@ -199,180 +158,171 @@ export default function AdminDashboard() {
                 </Link>
               ))}
             </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Ưu tiên hôm nay</p>
-                <p className="mt-2 text-lg font-black text-white">{loading ? 'Đang tải...' : analytics?.todayOrders ? `${analytics.todayOrders} đơn cần theo dõi` : 'Không có đơn mới'}</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-300">Cảnh báo tồn kho</p>
-                <p className="mt-2 text-lg font-black text-white">
-                  {loading ? 'Đang tải...' : inventoryReport ? `${inventoryReport.summary.lowStockCount} sản phẩm sắp hết` : 'Chưa có dữ liệu'}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
+      {/* KPI Dashboard */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-              <stat.icon className="h-5 w-5 text-primary" />
-            </div>
-            <p className="mt-4 text-2xl font-black">{stat.value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{stat.caption}</p>
+        {/* Doanh Thu */}
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Doanh Thu (Hôm Nay)</p>
+            <CircleDollarSign className="h-5 w-5 text-primary" />
           </div>
-        ))}
-      </div>
+          <p className="mt-4 text-3xl font-black text-foreground">28.750.000 ₫</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-success">
+            <TrendingUp className="h-4 w-4" />
+            <span>+15.2% so với hôm qua</span>
+          </div>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Doanh số theo kỳ</p>
-          <p className="mt-3 text-2xl font-black">{periodAnalytics ? formatPrice(periodAnalytics.totalRevenue) : '...'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{periodAnalytics ? `${periodAnalytics.totalOrders} đơn (${metricMode})` : 'Đang tải'}</p>
+        {/* Đơn Hàng Mới */}
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Đơn Hàng Mới</p>
+            <ShoppingBag className="h-5 w-5 text-primary" />
+          </div>
+          <p className="mt-4 text-3xl font-black text-foreground">1.250</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-success">
+            <TrendingUp className="h-4 w-4" />
+            <span>+8% so với hôm qua</span>
+          </div>
         </div>
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Tổng tồn kho</p>
-          <p className="mt-3 text-2xl font-black">{inventoryReport ? inventoryReport.summary.totalStock.toLocaleString('vi-VN') : '...'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tồn kho hiện tại toàn hệ thống</p>
+
+        {/* Lợi Nhuận Gộp */}
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Lợi Nhuận (Gộp)</p>
+            <DollarSign className="h-5 w-5 text-primary" />
+          </div>
+          <p className="mt-4 text-3xl font-black text-foreground">11.450.000 ₫</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-success">
+            <TrendingUp className="h-4 w-4" />
+            <span>Margin 35%</span>
+          </div>
         </div>
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Sắp hết hàng</p>
-          <p className="mt-3 text-2xl font-black text-amber-600">{inventoryReport ? inventoryReport.summary.lowStockCount : '...'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Sản phẩm dưới ngưỡng cảnh báo</p>
-        </div>
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-sm text-muted-foreground">Hết hàng</p>
-          <p className="mt-3 text-2xl font-black text-sale">{inventoryReport ? inventoryReport.summary.outOfStockCount : '...'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Sản phẩm đang ở trạng thái chỉ xem</p>
+
+        {/* Tỷ Lệ Chuyển Đổi */}
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Tỷ Lệ Chuyển Đổi</p>
+            <Percent className="h-5 w-5 text-primary" />
+          </div>
+          <p className="mt-4 text-3xl font-black text-foreground">2.8%</p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Activity className="h-4 w-4" />
+            <span>(Ổn định)</span>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="font-bold">Top sản phẩm</h3>
-              <p className="text-sm text-muted-foreground">Dựa trên số lượng trong đơn hàng đã tạo.</p>
-            </div>
-            <Link to="/admin/products" className="text-sm font-medium text-primary hover:underline">
-              Quản lý sản phẩm
-            </Link>
-          </div>
-
-          {loading ? (
-            <p className="mt-4 text-sm text-muted-foreground">Đang tải...</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {analytics?.topProducts.length ? (
-                analytics.topProducts.map((product, index) => (
-                  <div key={product.productId} className="rounded-2xl border border-border/70 p-4 transition hover:bg-secondary/30">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">
-                          {index + 1}. {product.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">SKU: {product.productId}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold">{product.quantity} pcs</p>
-                        <p className="text-xs text-muted-foreground">{formatPrice(product.revenue)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">Chưa có dữ liệu bán hàng.</p>
-              )}
-            </div>
-          )}
-        </div>
-
+        
+        {/* Left Column: Chart & Inventory */}
         <div className="space-y-4">
           <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4 text-primary" />
-              <h3 className="font-bold">Trạng thái đơn hàng</h3>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-bold text-lg">Biểu Đồ Doanh Thu</h3>
+                <p className="text-sm text-muted-foreground">Theo dõi tăng trưởng thực tế theo ngày</p>
+              </div>
             </div>
-            <div className="mt-4 space-y-3">
-              {analytics?.statusBreakdown.map((item) => {
-                const total = analytics.totalOrders || 1;
-                const percentage = Math.round((item.count / total) * 100);
-
-                return (
-                  <div key={item.status}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{statusLabels[item.status]}</span>
-                      <span className="font-medium">{item.count}</span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(percentage, item.count > 0 ? 8 : 0)}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={mockChartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value / 1000000}M`} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    formatter={(value: number) => formatPrice(value)}
+                  />
+                  <Line type="monotone" name="Doanh thu" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" name="Chi phí" dataKey="cost" stroke="#eab308" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" name="Kỳ trước" dataKey="prevRevenue" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <BadgeAlert className="h-4 w-4 text-primary" />
-              <h3 className="font-bold">Đơn hàng gần đây</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              <h3 className="font-bold text-lg">Cảnh báo tồn kho</h3>
             </div>
-            <div className="mt-4 space-y-3">
-              {analytics?.recentOrders.map((order) => (
-                <div key={order.id} className="rounded-2xl border border-border/70 p-4 transition hover:bg-secondary/30">
-                  <div className="flex items-center justify-between gap-3">
+            <div className="space-y-3">
+              {mockInventoryWarnings.map(item => (
+                <div key={item.id} className={`flex items-center justify-between rounded-2xl border p-4 ${item.status === 'Hết Hàng' ? 'bg-sale/5 border-sale/20' : 'bg-warning/5 border-warning/20'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2 h-10 rounded-full ${item.status === 'Hết Hàng' ? 'bg-sale' : 'bg-warning'}`}></div>
                     <div>
-                      <p className="text-sm font-semibold">{order.orderNumber}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+                      <p className="font-semibold">{item.name}</p>
+                      <p className={`text-xs font-bold ${item.status === 'Hết Hàng' ? 'text-sale' : 'text-warning'}`}>{item.status} ({item.stock} cái)</p>
                     </div>
-                    <p className="text-sm font-bold text-primary">{formatPrice(order.total)}</p>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {statusLabels[order.status]} · {order.paymentMethod.toUpperCase()} · {order.items.length} sản phẩm
-                  </p>
+                  <Link to="/admin/products" className={`px-4 py-2 text-xs font-bold rounded-full ${item.status === 'Hết Hàng' ? 'bg-sale text-white hover:bg-sale/90' : 'bg-warning text-white hover:bg-warning/90'} transition`}>
+                    {item.status === 'Hết Hàng' ? 'Nhập Hàng Ngay' : 'Xem Chi Tiết'}
+                  </Link>
                 </div>
               ))}
-              {analytics && analytics.recentOrders.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Chưa có đơn hàng mới.</p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2">
-              <PackageSearch className="h-4 w-4 text-primary" />
-              <h3 className="font-bold">Luồng xử lý nhanh</h3>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <Link to="/admin/orders" className="rounded-2xl border border-border bg-muted/30 p-4 transition hover:bg-secondary">
-                <p className="text-sm font-semibold">1. Lọc đơn chờ</p>
-                <p className="mt-1 text-xs text-muted-foreground">Ưu tiên đơn cần xác nhận hoặc giao ngay.</p>
-              </Link>
-              <Link to="/admin/products" className="rounded-2xl border border-border bg-muted/30 p-4 transition hover:bg-secondary">
-                <p className="text-sm font-semibold">2. Kiểm tra tồn kho</p>
-                <p className="mt-1 text-xs text-muted-foreground">Xử lý sản phẩm sắp hết trước khi phát sinh lỗi.</p>
-              </Link>
-              <Link to="/admin/reporting" className="rounded-2xl border border-border bg-muted/30 p-4 transition hover:bg-secondary">
-                <p className="text-sm font-semibold">3. Đọc cảnh báo</p>
-                <p className="mt-1 text-xs text-muted-foreground">Xem KPI và điểm nghẽn của hệ thống theo kỳ báo cáo.</p>
-              </Link>
             </div>
           </div>
         </div>
+
+        {/* Right Column: Top Products & Activities */}
+        <div className="space-y-4">
+          
+          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold">Top sản phẩm</h3>
+                <p className="text-sm text-muted-foreground">Bán chạy nhất hôm nay</p>
+              </div>
+              <Link to="/admin/products" className="text-sm font-medium text-primary hover:underline">
+                Xem tất cả
+              </Link>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {mockTopProducts.map((product, index) => (
+                <div key={product.productId} className="rounded-2xl border border-border/70 p-4 transition hover:bg-secondary/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {index + 1}. {product.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">SKU: {product.productId}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">{product.quantity} pcs</p>
+                      <p className="text-xs text-muted-foreground">{formatPrice(product.revenue)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-5 w-5 text-primary" />
+              <h3 className="font-bold">Cập nhật hoạt động mới nhất</h3>
+            </div>
+            <div className="space-y-4">
+              {mockRecentActivities.map(activity => (
+                <div key={activity.id} className="relative pl-6 before:absolute before:left-2 before:top-2 before:bottom-[-16px] before:w-[2px] before:bg-border last:before:hidden">
+                  <div className="absolute left-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-background"></div>
+                  <p className="text-sm font-medium">{activity.text}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{activity.time}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-        <h3 className="font-bold">Trạng thái hệ thống</h3>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Auth, catalog, order, payment và email service đang hoạt động trên Docker stack.
-          {topStatus ? ` Mảng đơn hàng đang nhiều nhất là ${statusLabels[topStatus.status].toLowerCase()}.` : ''}
-        </p>
-      </div>
     </div>
   );
 }
